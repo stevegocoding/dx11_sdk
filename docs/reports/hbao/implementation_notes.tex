@@ -1,0 +1,62 @@
+\documentclass[a4paper,12pt]{article}
+
+\begin{document}
+
+\chapter{Implementation Notes}
+\label{sec:ImplementationNotes}
+
+\section{Scene Renderer}
+\label{sec:SceneRenderer}
+
+\section{HBAO Renderer}
+\label{sec:HBAORenderer}
+
+\subsection{Resources}
+\label{sec:Resources}
+
+\subsubsection{Input}
+\label{sec:Input}
+
+\begin{table}[htbp]
+	\centering
+		\begin{tabular} {l|l}
+		\end{tabular}
+	\caption{Parameters Constant Buffer}
+	\label{tab:ParametersConstantBuffer}
+\end{table}
+
+\begin{table}[htbp]
+	\centering
+		\begin{tabular} [l|l}
+			
+		\end{tabular}
+	\caption{Input Depth Buffer (Non-linear)}
+	\label{tab:InputDepthBuffer}
+\end{table} 
+\subsubsection{Render Targets}
+\label{sec:RenderTargets}
+
+\begin{table*}[htbp]
+	\centering
+		\begin{tabular} {l|l}
+			\hline Format & R32\_FLOAT \\
+			\hline Width & Same as input depth \\ 
+			\hline Height & Same as input depth \\
+		\end{tabular}
+	\caption{Linear Depth Buffer}
+	\label{tab:LinearDepth}
+\end{table*}
+
+\begin{table}[h]
+	\centering
+		\begin{tabular} {l|l}
+			\toprule
+			\hline Format & R16G16\_FLOAT \\ 
+			\hline Width & Backbuf Width \\
+			\hline Height & Backbuf Height \\ 
+		\end{tabular}
+	\caption{AO Buffer}
+	\label{tab:AOBuffer}
+\end{table}
+
+\end{document}

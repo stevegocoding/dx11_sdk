@@ -1,0 +1,10 @@
+# Folders
+###########################
+media/
+deps/
+build/
+
+# LaTeX temp files 
+*.aux
+*.log
+*.synctex
