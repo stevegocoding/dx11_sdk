@@ -452,12 +452,13 @@ HRESULT c_hbao_renderer_component::compile_effects()
 	m_blur_composite_effect_var_table.reset(new c_d3dx11_effect_params_table(m_render_sys_context, m_blur_composite_effect)); 
 	m_blur_composite_tech = m_blur_composite_effect_var_table->get_technique_by_name("blur_composite_tech");
 	m_input_ao_tex_sr = m_blur_composite_effect_var_table->get_variable_by_name("tex_ao")->AsShaderResource();
+	m_input_color_tex_sr = m_blur_composite_effect_var_table->get_variable_by_name("tex_diffuse")->AsShaderResource();
 	
-
     return hr; 
 } 
 
 void c_hbao_renderer_component::render_ao(float fovy, 
+										  ID3D11ShaderResourceView *color_srv,
                                           d3d11_render_target_view_ptr& output_color_rtv)
 {
 	m_render_targets->set_full_resolution(m_input_depth_info->width, m_input_depth_info->height);
@@ -476,25 +477,29 @@ void c_hbao_renderer_component::render_ao(float fovy,
     //////////////////////////////////////////////////////////////////////////
     // Blur
 
-	apply_render_composit_ps(output_color_rtv); 
+	apply_render_composit_ps(color_srv, output_color_rtv); 
 	
 }
 
-void c_hbao_renderer_component::apply_render_composit_ps(d3d11_render_target_view_ptr& output_color_rtv)
+void c_hbao_renderer_component::apply_render_composit_ps(ID3D11ShaderResourceView *color_srv, d3d11_render_target_view_ptr& output_color_rtv)
 {
 	m_render_sys_context->get_d3d11_device_context()->RSSetViewports(1, &m_full_viewport); 
 	
 	ID3D11RenderTargetView *rtvs[] = {output_color_rtv}; 
+	
 	m_render_sys_context->get_d3d11_device_context()->OMSetRenderTargets(1, rtvs, NULL);
 	
 	ID3D11ShaderResourceView *srv = m_render_targets->get_full_res_ao_zbuffer2()->get_srv(); 
+	ID3D11ShaderResourceView *srv2 = color_srv;
 	m_input_ao_tex_sr->SetResource(srv);
+	m_input_color_tex_sr->SetResource(srv2);
 	
 	m_blur_composite_tech->GetPassByIndex(0)->Apply(0, m_render_sys_context->get_d3d11_device_context());
 	
 	m_render_sys_context->get_d3d11_device_context()->Draw(3, 0);	
 
 	m_input_ao_tex_sr->SetResource(NULL);
+	m_input_color_tex_sr->SetResource(NULL); 
 
 	m_blur_composite_tech->GetPassByIndex(0)->Apply(0, m_render_sys_context->get_d3d11_device_context());
 }
@@ -677,9 +682,6 @@ void c_hbao_renderer_component::create_random_texture()
 		dd.push_back(0); 
 		
 	}
-	
-	
-	
 
 	D3D11_TEXTURE2D_DESC desc;
 	desc.Width            = RANDOM_TEXTURE_WIDTH;

@@ -29,7 +29,10 @@ BlendState disable_blend
 float4 blur_composite_ps_main(post_proc_vs_out input) : SV_TARGET
 {
 	float ao = tex_ao.Sample(point_wrap_sampler, input.texcoord); 
-	return pow(ao, 1);
+	float4 diffuse = tex_diffuse.Sample(point_wrap_sampler, input.texcoord); 
+	
+	float3 rgb = diffuse.xyz * ao; 
+	return float4(rgb, 1.0f);  
 }
 
 technique10 blur_composite_tech

@@ -36,15 +36,7 @@ void init_hbao_params()
 
 void test_hbao_render_ao(texture_2d_ptr& input_depth, d3d11_render_target_view_ptr output_color_rtv)
 {   
-    g_hbao_renderer->set_depth_for_ao(input_depth, ZNEAR, ZFAR, 0.0f, 1.0f, 1.0f);
-	
-	g_hbao_renderer->set_ao_parameters(g_hbao_params);
-    
-    g_hbao_renderer->render_ao(FOVY, output_color_rtv); 
 
-    g_hbao_renderer->render_blur_x(); 
-
-    g_hbao_renderer->render_blur_y(); 
 }
 
 static void create_gbuf_rtts(int samples, int quality)
@@ -198,21 +190,26 @@ static void CALLBACK on_frame_render( ID3D11Device* pd3dDevice, ID3D11DeviceCont
     PIX_EVENT_END();
 
     //////////////////////////////////////////////////////////////////////////
-    // Render SSAO to the back buffer 
+    // Render SSAO and composite 
     //////////////////////////////////////////////////////////////////////////
 
 	d3d11_render_target_view_ptr backbuf_color_rtv = DXUTGetD3D11RenderTargetView(); // dosen't add add ref
 	ID3D11DepthStencilView *backbuf_dsv = DXUTGetD3D11DepthStencilView();
 	pd3dImmediateContext->ClearRenderTargetView(backbuf_color_rtv, clear_color);
 	pd3dImmediateContext->ClearDepthStencilView(backbuf_dsv, D3D11_CLEAR_DEPTH, 1.0f, 0);
-
-	ID3D11RenderTargetView *rtvs2[] = {backbuf_color_rtv};
-
-	pd3dImmediateContext->OMSetRenderTargets(1, rtvs2, backbuf_dsv);
-	g_scene->on_frame_render(fTime, fElapsedTime);
 	
 	PIX_EVENT_BEGIN(Begin hbao); 
-    test_hbao_render_ao(g_resolver->get_resolved_depth(), backbuf_color_rtv);
+
+	g_hbao_renderer->set_depth_for_ao(g_resolver->get_resolved_depth(), ZNEAR, ZFAR, 0.0f, 1.0f, 1.0f);
+
+	g_hbao_renderer->set_ao_parameters(g_hbao_params);
+
+	g_hbao_renderer->render_ao(FOVY, g_resolver->get_resolved_color()->get_srv(), backbuf_color_rtv); 
+
+	g_hbao_renderer->render_blur_x(); 
+
+	g_hbao_renderer->render_blur_y(); 
+	
 	PIX_EVENT_END(); 
 
     PIX_EVENT_END_FRAME(); 

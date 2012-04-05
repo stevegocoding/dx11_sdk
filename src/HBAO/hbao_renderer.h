@@ -2,88 +2,6 @@
 
 #include "app_listener.h"
 
-//class c_hbao_engine_component : public c_demo_app_listener
-//{
-//    typedef c_demo_app_listener super;
-//public:
-//    c_hbao_engine_component(float fovy);
-//
-//    virtual HRESULT on_create_resource(const render_sys_context_ptr& render_sys_context); 
-//    virtual void on_swap_chain_resized(const swap_chain_resize_event& event);
-//
-//    void apply_hbao_nd(const render_texture_ptr& input_depth, const render_texture_ptr& input_normal); 
-//    
-//    void init_hbao_params(hbao_params_ptr& ao_params) {}
-//    
-//
-//private:
-//    void compile_shaders();
-//    void update_rt(unsigned int bbuf_w, unsigned int bbuf_h);
-//    void update_viewport(unsigned int bbuf_w, unsigned int bbuf_h); 
-//
-//    void init_params(); 
-//    void update_num_steps(); 
-//    void update_angle_biase(); 
-//    void update_num_dirs(); 
-//    void update_radius(); 
-//    void update_attenuation();
-//    void update_contrast();
-//    void update_focal_len(unsigned int bbuf_w, unsigned int bbuf_h); 
-//    void update_resolution(unsigned int bbuf_w, unsigned int bbuf_h);
-//    void update_aspect_ratio(); 
-//    
-//    //////////////////////////////////////////////////////////////////////////
-//    // Resources
-//    texture_2d_ptr m_random_tex;
-//    texture_2d_ptr m_ssao_buf;
-//
-//    //////////////////////////////////////////////////////////////////////////
-//    // Effect 
-//    d3dx11_effect_ptr m_hbao_effect; 
-//    effect_params_table_ptr m_effect_params_table;
-//    ID3DX11EffectTechnique *m_hbao_nd_tech;
-//
-//    ID3DX11EffectScalarVariable *m_param_radius; 
-//    ID3DX11EffectScalarVariable *m_param_inv_radius; 
-//    ID3DX11EffectScalarVariable *m_param_sqr_radius;
-//    ID3DX11EffectScalarVariable *m_param_contrast; 
-//    ID3DX11EffectScalarVariable *m_param_num_dirs; 
-//    ID3DX11EffectScalarVariable *m_param_num_steps; 
-//    ID3DX11EffectScalarVariable *m_param_angle_bias; 
-//    ID3DX11EffectScalarVariable *m_param_tan_angle_bias; 
-//    ID3DX11EffectScalarVariable *m_param_attenuation;
-//    ID3DX11EffectScalarVariable *m_param_aspect_ratio;
-//    ID3DX11EffectScalarVariable *m_param_inv_aspect_ratio;
-//    ID3DX11EffectVectorVariable *m_param_focal_len; 
-//    ID3DX11EffectVectorVariable *m_param_inv_focal_len; 
-//    ID3DX11EffectVectorVariable *m_param_resolution;
-//    ID3DX11EffectVectorVariable *m_param_inv_resolution;
-//    
-//    ID3DX11EffectShaderResourceVariable *m_linear_depth_tex_sr; 
-//    ID3DX11EffectShaderResourceVariable *m_normal_tex_sr;
-//    ID3DX11EffectShaderResourceVariable *m_random_tex_sr;
-//
-//    //////////////////////////////////////////////////////////////////////////
-//    // Camera params
-//    float m_fovy;
-//    D3D11_VIEWPORT m_vp; 
-//    
-//    //////////////////////////////////////////////////////////////////////////
-//    // HBAO parameters
-//    int                 m_num_steps;
-//    int                 m_num_dirs;
-//    float               m_ao_radius;
-//    float               m_radius_mutiplier;
-//    float               m_angle_bias;
-//    float               m_attenuation;
-//    float               m_contrast;
-//    float               m_aspect_ratio;
-//    float               m_focal_len[2];
-//    float               m_inv_focal_len[2]; 
-//    float               m_resolution[2];
-//    float               m_inv_resolution[2];
-//};
-
 #ifndef INV_LN2
 #define INV_LN2 1.44269504f
 #endif
@@ -187,13 +105,14 @@ public:
     // Output: AO Buffer
     */
     // ---------------------------------------------------------------------
-    void render_ao(float fovy, d3d11_render_target_view_ptr& output_color_rtv); 
+    void render_ao(float fovy, ID3D11ShaderResourceView *color_srv, d3d11_render_target_view_ptr& output_color_rtv); 
 	
     
     void render_blur_x(); 
     void render_blur_y();
+
 	
-	void apply_render_composit_ps(d3d11_render_target_view_ptr& output_color_rtv); 
+	void apply_render_composit_ps(ID3D11ShaderResourceView *color_srv, d3d11_render_target_view_ptr& output_color_rtv); 
 
 
     //////////////////////////////////////////////////////////////////////////
@@ -209,6 +128,7 @@ public:
 	effect_params_table_ptr m_blur_composite_effect_var_table;
 	ID3DX11EffectTechnique *m_blur_composite_tech; 
 	ID3DX11EffectShaderResourceVariable *m_input_ao_tex_sr;
+	ID3DX11EffectShaderResourceVariable *m_input_color_tex_sr;
 	
 
     //////////////////////////////////////////////////////////////////////////
