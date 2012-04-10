@@ -33,6 +33,8 @@ float4 blur_composite_ps_main(post_proc_vs_out input) : SV_TARGET
 	
 	float3 rgb = diffuse.xyz * ao; 
 	return float4(rgb, 1.0f);  
+	
+	//return float4(ao, 0, 0, 1); 
 }
 
 technique10 blur_composite_tech

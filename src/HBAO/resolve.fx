@@ -94,7 +94,7 @@ technique11 resolve_depth_tech
         SetPixelShader(CompileShader(ps_5_0, resolve_depth_ps_main()));
         
         SetBlendState(bs_disable_blend, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xffffffff);
-        SetDepthStencilState(dss_disable_depth, 0);
+        // SetDepthStencilState(dss_disable_depth, 0);
     }
 }
 
@@ -107,6 +107,6 @@ technique11 linearize_depth_tech
         SetPixelShader(CompileShader(ps_5_0, linearize_depth_ps()));
         
         SetBlendState(bs_disable_blend, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xffffffff);
-        SetDepthStencilState(dss_disable_depth, 0); 
+        // SetDepthStencilState(dss_disable_depth, 0); 
     }
 }

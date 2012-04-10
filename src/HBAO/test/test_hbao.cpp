@@ -85,10 +85,12 @@ static void create_gbuf_rtts(int samples, int quality)
     if (samples > 1)
     {
         dsv_desc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DMS;
+		srv_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DMS;
     }
     else 
     {
         dsv_desc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D; 
+		srv_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
         dsv_desc.Texture2D.MipSlice = 0;
     }
     g_gbuf_depth_rtt.reset(new c_texture2D(g_render_context, &tex_desc, NULL));

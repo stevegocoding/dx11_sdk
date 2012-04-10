@@ -44,7 +44,7 @@ public:
             tex_desc.SampleDesc.Count = 1; 
             tex_desc.SampleDesc.Quality = 0;
             tex_desc.MipLevels = 1;
-            tex_desc.Format = DXGI_FORMAT_R16G16_FLOAT; 
+            tex_desc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
             tex_desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET; 
             m_full_res_ao_zbuffer.reset(new c_texture2D(m_render_context, &tex_desc, NULL)); 
         }
@@ -58,7 +58,7 @@ public:
             m_full_res_ao_zbuffer2 = make_simple_rt(m_render_context, 
                                                     m_full_width,
                                                     m_full_height,
-                                                    DXGI_FORMAT_R16G16_FLOAT);
+                                                    DXGI_FORMAT_R16G16B16A16_FLOAT);
         }
         return m_full_res_ao_zbuffer2; 
     }

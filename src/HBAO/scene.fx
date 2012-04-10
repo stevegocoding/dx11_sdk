@@ -16,6 +16,7 @@ cbuffer cb_constants
 }
 
 bool g_is_ground = false;
+Texture2D<float3> tex_color; 
 
 struct vs_scene_input
 {
@@ -83,6 +84,13 @@ DepthStencilState ds_less_func
     DepthFunc = Less;
 };
 
+SamplerState point_clamp_sampler
+{
+    Filter = MIN_MAG_MIP_POINT; 
+    AddressU = Clamp;
+    AddressV = Clamp; 
+}; 
+
 vs_scene_output vs_scene_main(vs_scene_input input)
 {
     vs_scene_output output;
@@ -148,15 +156,43 @@ ps_scene_output_nd ps_scene_main_nd(ps_scene_input input)
     return output;
 }
 
+/*
+float3 brighten(float3 color)
+{
+	return pow(saturate(color), 0.8);
+}
+
+float4 copy_color_ps(post_proc_vs_out input) : SV_TARGET
+{
+	float color = tex_color.Sample(point_clamp_sampler, input.texcoord); 
+	return float4(brighten(color), 1); 
+}
+*/
+
 technique11 render_scene_diffuse
 {
     pass p0
     {
         SetVertexShader(CompileShader(vs_5_0, vs_scene_main()));
         SetGeometryShader(NULL);
-        SetPixelShader(CompileShader(ps_5_0, ps_scene_main_n()));
+        SetPixelShader(CompileShader(ps_5_0, ps_scene_main_nd()));
         
+		SetRasterizerState( rs_multisample );
         SetBlendState(bs_noblending, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xffffffff);
         SetDepthStencilState(ds_less_func, 0);
     }
 }
+
+/*
+technique11 copy_color
+{
+	pass p0
+	{        
+		SetVertexShader(CompileShader(vs_5_0, fullscreen_triangle_vs_main()));
+        SetGeometryShader(NULL);
+        SetPixelShader(CompileShader(ps_5_0, copy_color_ps_main()));
+        
+        SetBlendState(bs_noblending, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xffffffff); 
+	}
+}
+*/

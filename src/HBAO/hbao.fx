@@ -11,7 +11,7 @@ Texture2D<float> tex_random;
 
 #define RANDOM_TEXTURE_WIDTH 4
 #define NUM_DIRECTIONS 8
-#define NUM_STEPS 6
+#define NUM_STEPS 4
 
 SamplerState point_clamp_sampler
 {
@@ -45,6 +45,9 @@ float3 uv_to_eye(float2 uv, float eye_z)
 {
 	uv = g_uv_to_view_a * uv + g_uv_to_view_b;
 	return float3(uv * eye_z, eye_z);  
+
+	// uv = (uv * float2(2.0, -2.0) - float2(1.0, -1.0)); 
+	// return float3(uv * g_inv_focal_len * eye_z, eye_z); 
 }
 
 // ---------------------------------------------------------------------
@@ -54,11 +57,20 @@ float3 uv_to_eye(float2 uv, float eye_z)
 // ---------------------------------------------------------------------
 float3 fetch_eye_pos(float2 uv)
 {
-    float z = tex_linear_depth.SampleLevel(point_clamp_sampler, uv, 0); 
+    float z = tex_linear_depth.SampleLevel(point_clamp_sampler, float3(uv, 0), 0); 
     return uv_to_eye(uv, z); 
 }
 
-float length2(float3 v) { return dot(v, v); }
+float length2(float3 v) 
+{ 
+	return dot(v, v); 
+}
+
+float invlength(float2 v)
+{
+    return rsqrt(dot(v,v));
+}
+
 float3 min_diff(float3 p, float3 p_right, float3 p_left)
 {
     float3 v1 = p_right - p;
@@ -80,7 +92,7 @@ float tan_to_sin(float x)
 
 float tangent(float3 p, float3 s)
 {
-    return (p.z - s.z) / length(s.xy - p.xy);
+    return (p.z - s.z) * invlength(s.xy - p.xy);
 }
 
 float2 snap_uv_offset(float2 uv)
@@ -94,12 +106,6 @@ float falloff(float d2)
     return d2 * g_neg_inv_r2 + 1.0f;
 }
 
-/*
-float invlength(float2 v)
-{
-    return rsqrt(dot(v,v));
-}
-
 float tangent(float3 t)
 {
     return -t.z * invlength(t.xy);
@@ -107,11 +113,13 @@ float tangent(float3 t)
 
 float biased_tangent(float3 t)
 {
-    float phi = atan(tangent(t)) + g_angle_bias;
-    return tan(min(phi, M_PI*0.5f)); 
+	return tangent(t) + g_tan_angle_bias; 
 }
 
-*/
+float3 tangent_vector(float2 delta_uv, float3 dpdu, float3 dpdv)
+{
+    return delta_uv.x * dpdu + delta_uv.y * dpdv;
+}
 
 /*
 float3 tangent_eye_pos(float2 uv, float4 tangent_plane)
@@ -144,7 +152,8 @@ void integrate_direction(inout float ao, float3 p, float2 uv, float2 delta_uv, f
 		{
 			// Accumulate AO between horizon and the sample 
 			float sin_s = tan_to_sin(tan_s); 
-			ao += falloff(d2) * (sin_s - sin_h); 
+			float r = sqrt(d2) * (1 / g_r);
+			ao += falloff(r) * (sin_s - sin_h); 
 			
 			// Update the current horizon angle
 			tan_h = tan_s; 
@@ -152,6 +161,39 @@ void integrate_direction(inout float ao, float3 p, float2 uv, float2 delta_uv, f
 		}
 	}
 }
+
+float integrate_occlusion(float2 uv0, 
+						  float2 snapped_duv,
+						  float3 p,
+						  float3 dpdu,
+						  float3 dpdv,
+						  inout float tan_h)
+{
+	float ao = 0; 
+
+    // Compute a tangent vector for snapped_duv
+	float3 t1 = tangent_vector(snapped_duv, dpdu, dpdv);
+	float tan_t = biased_tangent(t1); 
+	float sin_t = tan_to_sin(tan_t); 
+
+	float3 s = fetch_eye_pos(uv0 + snapped_duv);
+	float tan_s = tangent(p, s); 
+
+	float sin_s = tan_to_sin(tan_s); 
+	float d2 = length2(s - p);
+	
+	if ( (d2 < g_r2) && (tan_s > tan_t) )
+	{
+        // Compute AO between the tangent plane and the sample
+		ao = falloff(d2) * (sin_s - sin_t); 
+		
+		// Update the horizon angle
+		tan_h = max(tan_h, tan_s);  
+	}	
+
+	return ao; 
+}
+
 
 void compute_steps(inout float2 step_size_uv, inout float num_steps, float ray_radius_pix, float rand)
 {
@@ -216,23 +258,78 @@ float normal_free_horizon_occlusion(float2 delta_uv,
 #else
     return max(ao * 0.5 - 1.0, 0.0);
 #endif
-
 }
+
+float horizon_occlusion(float2 delta_uv, 
+						float2 texel_delta_uv, 
+						float2 uv0,
+						float3 p, 
+						float num_steps,
+						float rand_step,
+						float3 dpdu, 
+						float3 dpdv)
+{
+	float ao = 0;
+	
+	// Randomize starting point within the first sample distance
+	float2 uv = uv0 + snap_uv_offset(rand_step * delta_uv); 
+	
+	// Snap increments to pixels to avoid disparities between xy
+    // and z sample locations and sample along a line
+	delta_uv = snap_uv_offset(delta_uv); 
+
+    // Compute tangent vector using the tangent plane
+	float3 t = delta_uv.x * dpdu + delta_uv.y * dpdv; 
+	float tan_h = biased_tangent(t);
+
+#if SAMPLE_FIRST_STEP 
+    // Take a first sample between uv0 and uv0 + deltaUV
+	float2 snapped_duv = snap_uv_offset(rand_step * delta_uv + texel_delta_uv); 
+	ao = integrate_occlusion(uv0, snapped_duv, p, dpdu, dpdv, tan_h);
+	--num_steps;
+#endif
+
+	float sin_h = tan_h / sqrt(1.0f + tan_h *tan_h); 
+	
+	for (float j = 1; j < num_steps; ++j)
+	{
+		uv += delta_uv;
+		float3 s = fetch_eye_pos(uv); 
+		float tan_s = tangent(p, s); 
+		float d2 = length2(s - p); 
+		
+		// use a merged dynamic branch
+		[branch]
+		if ( (d2 < g_r2) && (tan_s > tan_h) )
+		{
+			// Accumulate AO between the horizon and the sample
+			float sin_s = tan_s / sqrt(1.0f + tan_s * tan_s);
+			ao += falloff(d2) * (sin_s - sin_h);
+			
+			// Update the current horizon angle 
+			tan_h = tan_s;
+			sin_h = sin_s; 
+		}
+	}
+
+	return ao;
+} 
 
 float2 test_ps(post_proc_vs_out input) : SV_TARGET
 {
 	float3 p = fetch_eye_pos(input.texcoord); 
 
-	// float3 rand = tex_random.SampleLevel(point_wrap_sampler, input.pos.xy / RANDOM_TEXTURE_WIDTH, 0);
+	float3 rand = tex_random.SampleLevel(point_wrap_sampler, input.pos.xy / RANDOM_TEXTURE_WIDTH, 0);
 
-	float3 rand = (float3)0.9; 
+	// float3 rand = (float3)0.5; 
+	// rand.z = 0.5;
 
 	float3 temp = rand * (float)1;
 	
 	// Compute projection of disk of radius g_R into uv space
     // Multiply by 0.5 to scale from [-1,1]^2 to [0,1]^2
 	float2 ray_radius_uv = 0.5 * g_r * g_focal_len / p.z; 
-	float ray_radius_pix = ray_radius_uv.x * g_ao_resolution.x;
+	float ray_radius_pix = ray_radius_uv.x * g_ao_resolution.x * 0.01;
 	if (ray_radius_pix < 1)
 		return 1.0; 
 
@@ -257,6 +354,8 @@ float2 test_ps(post_proc_vs_out input) : SV_TARGET
 	float ao = 0; 
 	float d; 
 	float alpha = 2.0f * M_PI / NUM_DIRECTIONS; 
+
+#if USE_NORMAL_FREE_HBAO
     for (d = 0; d < NUM_DIRECTIONS*0.5; ++d)
     {
 		float angle = alpha * d; 
@@ -266,7 +365,17 @@ float2 test_ps(post_proc_vs_out input) : SV_TARGET
 		ao += normal_free_horizon_occlusion(delta_uv, texel_delta_uv, input.texcoord, p, num_steps, rand.z); 
 	}
 	ao *= 2.0;
+#else 
+	for (d = 0; d < NUM_DIRECTIONS; ++d)
+	{
+		float angle = alpha * d; 
+		float2 dir = rotate_direction(float2(cos(angle), sin(angle)), rand.xy); 
+		float delta_uv = dir * step_size.xy;
+		float2 texel_delta_uv = dir * g_inv_ao_resolution; 
+		ao += horizon_occlusion(delta_uv, texel_delta_uv, input.texcoord, p, num_steps, rand.z, dPdu, dPdv);
+	}
 
+#endif 
 	ao = 1.0 - ao / NUM_DIRECTIONS * g_strength; 
 
 	return float2(ao, p.z); 
