@@ -61,6 +61,8 @@ set(SOURCE_FILES
 	hbao_resolve.cpp
 	hbao_renderer.h
 	hbao_renderer.cpp
+	hbao_bilateral_blur.h
+	hbao_bilateral_blur.cpp
 	hbao_gui.h
 	hbao_gui.cpp
 	render_system_context.h
@@ -75,6 +77,7 @@ set(FX_FILES
 	hbao.fx
 	resolve.fx
 	blur_composite.fx
+	bilateral_blur.fx
     fullscreen_triangle_vs.hlsl
     hbao_params_cb.hlsl
     linearize_depth_ps.hlsl)
@@ -88,6 +91,8 @@ set(TEST_FILES
     test/test_resolve.cpp
     test/test_hbao.h
     test/test_hbao.cpp
+	test/test_bilateral_blur.h
+	test/test_bilateral_blur.cpp
     test/dxut_test_fixture.h
     test/dxut_test_fixture.cpp)
 

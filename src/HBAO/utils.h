@@ -60,6 +60,11 @@ texture_2d_ptr make_simple_rt(render_sys_context_ptr& render_context,
                               DXGI_FORMAT format, 
                               unsigned int formatSizeInBytes = 0);
 
+texture_2d_ptr make_simple_ds(render_sys_context_ptr& render_context, 
+							  unsigned int width, 
+							  unsigned int height,
+							  DXGI_FORMAT format);
+
 
 class c_render_texture
 {

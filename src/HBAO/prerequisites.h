@@ -25,6 +25,9 @@ typedef CComPtr<ID3D11RenderTargetView> d3d11_render_target_view_ptr;
 typedef CComPtr<ID3D11ShaderResourceView> d3d11_shader_resourse_view_ptr;
 typedef CComPtr<ID3D11DepthStencilView> d3d11_depth_stencil_view_ptr;
 
+// States
+typedef CComPtr<ID3D11DepthStencilState> d3d11_ds_state_ptr;
+
 // Effect 11
 typedef CComPtr<ID3DX11Effect> d3dx11_effect_ptr; 
 typedef CComPtr<ID3DX11EffectTechnique> d3dx11_effect_tech_ptr;

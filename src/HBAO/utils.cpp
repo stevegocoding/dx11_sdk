@@ -99,6 +99,62 @@ texture_2d_ptr make_simple_rt(render_sys_context_ptr& render_context,
     return tex; 
 }
 
+texture_2d_ptr make_simple_ds(render_sys_context_ptr& render_context, unsigned int width, unsigned int height, DXGI_FORMAT format)
+{
+	D3D11_TEXTURE2D_DESC desc; 
+	memset(&desc, 0, sizeof(desc)); 
+	desc.Width = width; 
+	desc.Height = height; 
+	desc.Format = format; 
+	desc.MipLevels = 1; 
+	desc.ArraySize = 1; 
+	desc.SampleDesc.Count = 1; 
+	desc.SampleDesc.Quality = 0; 
+	desc.Usage = D3D11_USAGE_DEFAULT; 
+	desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_DEPTH_STENCIL; 
+	desc.CPUAccessFlags = 0; 
+	desc.MiscFlags = 0; 
+
+	texture_2d_ptr tex;
+	tex.reset(new c_texture2D(render_context, &desc, NULL)); 
+
+	D3D11_DEPTH_STENCIL_VIEW_DESC dsv_desc; 
+	D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc;
+	::memset(&dsv_desc, 0, sizeof(D3D11_DEPTH_STENCIL_VIEW_DESC));
+	::memset(&srv_desc, 0, sizeof(D3D11_SHADER_RESOURCE_VIEW_DESC));
+	
+	switch (format)
+	{
+	case DXGI_FORMAT_R32_TYPELESS:
+		dsv_desc.Format = DXGI_FORMAT_D32_FLOAT;
+		srv_desc.Format = DXGI_FORMAT_R32_FLOAT;
+		break;
+	case DXGI_FORMAT_D24_UNORM_S8_UINT:
+		dsv_desc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+		srv_desc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+		break;
+	case DXGI_FORMAT_R24G8_TYPELESS:
+		dsv_desc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT; 
+		srv_desc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+		break;
+	}
+	
+	dsv_desc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D; 
+	dsv_desc.Texture2D.MipSlice = 0; 
+	
+	tex->bind_ds_view(&dsv_desc);
+	
+	if (format == DXGI_FORMAT_R32_TYPELESS || format == DXGI_FORMAT_R24G8_TYPELESS)
+	{
+		srv_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D; 
+		srv_desc.Texture2D.MostDetailedMip = 0; 
+		srv_desc.Texture2D.MipLevels = 1;
+		tex->bind_sr_view(&srv_desc); 
+	}
+	
+	return tex; 
+}
+
 //////////////////////////////////////////////////////////////////////////
 // Mesh Utilities
 

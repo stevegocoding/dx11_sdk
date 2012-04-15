@@ -18,8 +18,6 @@ static hbao_component_ptr g_hbao_renderer;
 static texture_2d_ptr g_gbuf_color_rtt; 
 static texture_2d_ptr g_gbuf_depth_rtt;
 
-static hbao_app_params g_hbao_app_params;
-
 hbao_app_params g_hbao_params;
 
 void init_hbao_params()
