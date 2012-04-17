@@ -4,6 +4,7 @@
 // Must match the values from Shaders/Source/HBAO_PS.hlsl
 #define RANDOM_TEXTURE_WIDTH 4
 #define NUM_DIRECTIONS 8
+#define SCALE ((1<<15))
 
 namespace 
 {
@@ -149,7 +150,7 @@ public:
         m_cb_data.inv_ao_resolution[0] = 1.0f / ao_width;
         m_cb_data.inv_ao_resolution[1] = 1.0f / ao_height; 
 
-        m_cb_data.focal_len[0] = 1.0f / tanf(m_fovy_rad * 0.5f) * (ao_height / m_ao_width);
+        m_cb_data.focal_len[0] = 1.0f / tanf(m_fovy_rad * 0.5f) * (ao_height / ao_width);
         m_cb_data.focal_len[1] = 1.0f / tanf(m_fovy_rad * 0.5f); 
         m_cb_data.inv_focal_len[0] = 1.0f / m_cb_data.focal_len[0]; 
         m_cb_data.inv_focal_len[1] = 1.0f / m_cb_data.focal_len[1]; 
@@ -374,7 +375,7 @@ HRESULT c_hbao_renderer_component::on_create_resource(const render_sys_context_p
 	
 	hr = compile_effects(); 
 
-	create_random_texture(); 
+	create_random_texture2(); 
 
     return hr;
 }
@@ -468,7 +469,7 @@ void c_hbao_renderer_component::render_ao(float fovy,
     m_params_cb->set_fovy(fovy);
     m_params_cb->update_ao_resolution_constants(m_renderer_options->m_ao_res_mode);
     m_params_cb->update_scene_scale_constants(); 
-    m_params_cb->update_subresource();
+    m_params_cb->update_subresource(); 
 	
     //////////////////////////////////////////////////////////////////////////
     // HBAO
@@ -476,9 +477,10 @@ void c_hbao_renderer_component::render_ao(float fovy,
 
     //////////////////////////////////////////////////////////////////////////
     // Blur
-
-	apply_render_composit_ps(color_srv, output_color_rtv); 
-	
+	/*
+	if (output_color_rtv)
+		apply_render_composit_ps(color_srv, output_color_rtv); 
+	*/
 }
 
 void c_hbao_renderer_component::apply_render_composit_ps(ID3D11ShaderResourceView *color_srv, d3d11_render_target_view_ptr& output_color_rtv)
@@ -705,4 +707,45 @@ void c_hbao_renderer_component::create_random_texture()
 	m_random_texture->bind_sr_view(NULL);
 
 	delete[] data;
+}
+
+void c_hbao_renderer_component::create_random_texture2()
+{
+	random_gen.seed((unsigned)0); 
+
+	signed short f[64 * 64 * 4]; 
+	for (int i = 0; i < 64 * 64 * 4; i+=4)
+	{
+		float angle = 2.0f * D3DX_PI * random_gen.randExc() / (float)NUM_DIRECTIONS; 
+		f[i  ] = (signed short)(SCALE*cos(angle)); 
+		f[i+1] = (signed short)(SCALE*sin(angle)); 
+		f[i+2] = (signed short)(SCALE*random_gen.randExc());
+		f[i+3] = 0;
+	}
+
+	D3D11_TEXTURE2D_DESC desc;
+	desc.Width            = 64;
+	desc.Height           = 64;
+	desc.MipLevels        = 1;
+	desc.ArraySize        = 1;
+	desc.Format           = DXGI_FORMAT_R16G16B16A16_SNORM;
+	desc.SampleDesc.Count = 1;
+	desc.SampleDesc.Quality = 0;
+	desc.Usage            = D3D11_USAGE_IMMUTABLE;
+	desc.BindFlags        = D3D11_BIND_SHADER_RESOURCE;
+	desc.CPUAccessFlags   = 0;
+	desc.MiscFlags        = 0;
+
+	D3D11_SUBRESOURCE_DATA sr_desc;
+	sr_desc.pSysMem          = f;
+	sr_desc.SysMemPitch      = 64*4*sizeof(signed short);
+	sr_desc.SysMemSlicePitch = 0;
+
+	m_random_texture.reset(new c_texture2D(m_render_sys_context, &desc, &sr_desc)); 
+	m_random_texture->bind_sr_view(NULL); 
+}
+
+texture_2d_ptr& c_hbao_renderer_component::get_ao_render_target()
+{
+	return m_render_targets->get_full_res_ao_zbuffer2();
 }

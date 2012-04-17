@@ -5,7 +5,7 @@
 #include "utils.h"
 
 class c_bilateral_blur_params_cb; 
-typedef boost::shared_ptr<c_bilateral_blur_params_cb> params_cb_ptr; 
+typedef boost::shared_ptr<c_bilateral_blur_params_cb> blur_params_cb_ptr; 
 
 struct blur_app_params
 {
@@ -88,7 +88,7 @@ private:
 	texture_2d_ptr m_input_diffuse_tex;
 	
 	
-	params_cb_ptr m_blur_params_cb;
+	blur_params_cb_ptr m_blur_params_cb;
 
 	// ---------------------------------------------------------------------
 	/*

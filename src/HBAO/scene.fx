@@ -11,7 +11,7 @@ cbuffer cb_constants
     float kd = 1;
     float ks = 2;
     float spec_power = 200.0f;
-    float4 diffuse_color = float4(0.0f, 1.0f, 0.0f, 1.0f);
+    float4 diffuse_color = float4(0.0f, 1.0f, 1.0f, 1.0f);
     float4 spec_color = float4(1.0f, 1.0f, 1.0f, 1.0f);
 }
 
@@ -111,7 +111,7 @@ float4 calculate_shading(ps_scene_input input)
         input.normal = -input.normal;
    
     // float4 key_light_color = float4(.457,.722 , 0.0 ,1);
-    float4 key_light_color = float4(0, 1 , 0 ,1);
+    float4 key_light_color = float4(1, 1, 1, 1);
     float3 l = normalize(input.key_light_pos - input.vpos);
     float4 diffuse_key_light_color = key_light_color * (0.5 + saturate(dot(input.normal, l)) * 0.5);
     

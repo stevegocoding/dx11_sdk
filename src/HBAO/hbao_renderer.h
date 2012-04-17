@@ -105,15 +105,15 @@ public:
     // Output: AO Buffer
     */
     // ---------------------------------------------------------------------
-    void render_ao(float fovy, ID3D11ShaderResourceView *color_srv, d3d11_render_target_view_ptr& output_color_rtv); 
+    void render_ao(float fovy, ID3D11ShaderResourceView *color_srv, d3d11_render_target_view_ptr& output_color_rtv = d3d11_render_target_view_ptr()); 
 	
-    
     void render_blur_x(); 
     void render_blur_y();
 
 	
 	void apply_render_composit_ps(ID3D11ShaderResourceView *color_srv, d3d11_render_target_view_ptr& output_color_rtv); 
 
+	texture_2d_ptr& get_ao_render_target(); 
 
     //////////////////////////////////////////////////////////////////////////
     // Effect 
@@ -184,6 +184,7 @@ public:
 private:
     void apply_render_ao();
 	void create_random_texture();
+	void create_random_texture2();
 }; 
 
 typedef boost::shared_ptr<c_hbao_renderer_component> hbao_component_ptr; 

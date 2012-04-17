@@ -1,8 +1,37 @@
-#include "hbao_params_cb.hlsl" 
 #include "fullscreen_triangle_vs.hlsl"
 
+cbuffer cb_hbao_params
+{
+	float2 g_full_resolution;
+	float2 g_inv_full_resolution;
+	
+	float2 g_ao_resolution; 
+	float2 g_inv_ao_resolution;
+	
+	float2 g_focal_len; 
+	float2 g_inv_focal_len; 
+	
+	float2 g_uv_to_view_a; 
+	float2 g_uv_to_view_b;
+
+	float g_r;
+	float g_r2;
+	float g_neg_inv_r2; 
+	float g_max_radius_pixels;
+	
+	float g_angle_bias;
+	float g_tan_angle_bias;
+	float g_pow_exp;
+	float g_strength;
+	
+	float g_blur_depth_threshold;
+	float g_blur_falloff; 
+	float g_lin_a; 
+	float g_lin_b; 
+};
+
 Texture2D<float> tex_linear_depth;
-Texture2D<float> tex_random;
+Texture2D<float3> tex_random;
 
 #define M_PI 3.14159265f
 
@@ -10,7 +39,7 @@ Texture2D<float> tex_random;
 #define USE_NORMAL_FREE_HBAO 0
 
 #define RANDOM_TEXTURE_WIDTH 4
-#define NUM_DIRECTIONS 8
+#define NUM_DIRECTIONS 32
 #define NUM_STEPS 4
 
 SamplerState point_clamp_sampler
@@ -43,11 +72,11 @@ BlendState disable_blend
 
 float3 uv_to_eye(float2 uv, float eye_z)
 {
-	uv = g_uv_to_view_a * uv + g_uv_to_view_b;
-	return float3(uv * eye_z, eye_z);  
+	//uv = g_uv_to_view_a * uv + g_uv_to_view_b;
+	//return float3(uv * eye_z, eye_z);  
 
-	// uv = (uv * float2(2.0, -2.0) - float2(1.0, -1.0)); 
-	// return float3(uv * g_inv_focal_len * eye_z, eye_z); 
+	uv = (uv * float2(2.0, -2.0) - float2(1.0, -1.0)); 
+	return float3(uv * g_inv_focal_len * eye_z, eye_z); 
 }
 
 // ---------------------------------------------------------------------
@@ -194,29 +223,6 @@ float integrate_occlusion(float2 uv0,
 	return ao; 
 }
 
-
-void compute_steps(inout float2 step_size_uv, inout float num_steps, float ray_radius_pix, float rand)
-{
-    // Avoid oversampling if NUM_STEPS is greater than the kernel radius in pixels
-	num_steps = min(NUM_STEPS, ray_radius_pix);
-	
-	float step_size_pix = ray_radius_pix / (num_steps + 1);
-
-	float max_num_steps = g_max_radius_pixels / step_size_pix; 
-	
-    // Clamp num_steps if it is greater than the max kernel footprint	
-	if (max_num_steps < num_steps)
-	{
-		// Use dithering to avoid AO discontinuities
-		num_steps = floor(max_num_steps + rand);
-		num_steps = max(num_steps, 1); 
-		step_size_pix = g_max_radius_pixels / num_steps; 
-	}
-	
-	// 
-	step_size_uv = step_size_pix * g_inv_ao_resolution; 
-}
-
 float normal_free_horizon_occlusion(float2 delta_uv, 
 									float2 texel_delta_uv, 
 									float2 uv0,
@@ -313,14 +319,37 @@ float horizon_occlusion(float2 delta_uv,
 	}
 
 	return ao;
+}
+
+void compute_steps(inout float2 step_size_uv, inout float num_steps, float ray_radius_pix, float rand)
+{
+    // Avoid oversampling if NUM_STEPS is greater than the kernel radius in pixels
+	num_steps = min(NUM_STEPS, ray_radius_pix);
+	
+	float step_size_pix = ray_radius_pix / (num_steps + 1);
+
+	float max_num_steps = g_max_radius_pixels / step_size_pix; 
+	
+    // Clamp num_steps if it is greater than the max kernel footprint	
+	if (max_num_steps < num_steps)
+	{
+		// Use dithering to avoid AO discontinuities
+		num_steps = floor(max_num_steps + rand);
+		num_steps = max(num_steps, 1); 
+		step_size_pix = g_max_radius_pixels / num_steps; 
+	}
+	
+	// 
+	step_size_uv = step_size_pix * g_inv_ao_resolution; 
 } 
 
 float2 test_ps(post_proc_vs_out input) : SV_TARGET
 {
 	float3 p = fetch_eye_pos(input.texcoord); 
 
-	float3 rand = tex_random.SampleLevel(point_wrap_sampler, input.pos.xy / RANDOM_TEXTURE_WIDTH, 0);
-
+	// float3 rand = tex_random.SampleLevel(point_wrap_sampler, input.pos.xy / RANDOM_TEXTURE_WIDTH, 0);
+	float3 rand = tex_random.Load(int3((int)input.pos.x&63, (int)input.pos.y&63, 0)).xyz;
+	
 	// float3 rand = (float3)0.5; 
 	// rand.z = 0.5;
 
@@ -328,8 +357,8 @@ float2 test_ps(post_proc_vs_out input) : SV_TARGET
 	
 	// Compute projection of disk of radius g_R into uv space
     // Multiply by 0.5 to scale from [-1,1]^2 to [0,1]^2
-	float2 ray_radius_uv = 0.5 * g_r * g_focal_len / p.z; 
-	float ray_radius_pix = ray_radius_uv.x * g_ao_resolution.x * 0.01;
+	float2 ray_radius_uv = float2((0.5 * g_r * g_focal_len.x / p.z), (0.5 * g_r * g_focal_len.y / p.z)); 
+	float ray_radius_pix = ray_radius_uv.x * g_ao_resolution.x;
 	if (ray_radius_pix < 1)
 		return 1.0; 
 
@@ -369,7 +398,8 @@ float2 test_ps(post_proc_vs_out input) : SV_TARGET
 	for (d = 0; d < NUM_DIRECTIONS; ++d)
 	{
 		float angle = alpha * d; 
-		float2 dir = rotate_direction(float2(cos(angle), sin(angle)), rand.xy); 
+		// float2 dir = rotate_direction(float2(cos(angle), sin(angle)), rand.xy); 
+		float2 dir = float2(cos(angle), sin(angle));
 		float delta_uv = dir * step_size.xy;
 		float2 texel_delta_uv = dir * g_inv_ao_resolution; 
 		ao += horizon_occlusion(delta_uv, texel_delta_uv, input.texcoord, p, num_steps, rand.z, dPdu, dPdv);

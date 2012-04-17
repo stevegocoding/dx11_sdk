@@ -3,7 +3,7 @@
 #include "fullscreen_triangle_vs.hlsl"
 
 Texture2D<float> tex_ao;
-Texture2D<float> tex_diffuse;
+Texture2D<float4> tex_diffuse;
 
 SamplerState point_wrap_sampler
 {
@@ -29,7 +29,7 @@ BlendState disable_blend
 float4 blur_composite_ps_main(post_proc_vs_out input) : SV_TARGET
 {
 	float ao = tex_ao.Sample(point_wrap_sampler, input.texcoord); 
-	float4 diffuse = tex_diffuse.Sample(point_wrap_sampler, input.texcoord); 
+	float4 diffuse = tex_diffuse.Sample(point_wrap_sampler, float3(input.texcoord,0)); 
 	
 	float3 rgb = diffuse.xyz * ao; 
 	return float4(rgb, 1.0f);  

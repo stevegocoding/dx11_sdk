@@ -68,14 +68,22 @@ c_resolve_test_fixture g_resolve_test;
 c_hbao_test_fixture g_hbao_test;
 c_bilateral_blur_test_fixture g_bilateral_blur_test;
 
-int WINAPI wWinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nCmdShow )
+static void setup_hbao_test()
 {
-	/*
-    g_hbao_test.setup();   
-    g_hbao_test.tear_down(); 
-	*/ 
+	g_hbao_test.setup();   
+	g_hbao_test.tear_down(); 
+}
+
+static void setup_bilateral_test()
+{
 	g_bilateral_blur_test.setup();
 	g_bilateral_blur_test.tear_down();
-	
+}
+
+int WINAPI wWinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nCmdShow )
+{
+	// setup_hbao_test(); 
+	setup_bilateral_test();
+
     return DXUTGetExitCode();
 }

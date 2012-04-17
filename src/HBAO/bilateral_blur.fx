@@ -8,7 +8,7 @@
 Texture2D<float> tex_depth;					// linear dpeth 
 Texture2DMS<float, NUM_MSAA_SAMPLES> tex_msaa_depth;
 Texture2D<float> tex_source;				// ao texture
-Texture2D<float> tex_color;					// diffuse color texture
+Texture2D<float4> tex_color;					// diffuse color texture
 
 SamplerState point_clamp_sampler
 {
@@ -99,7 +99,7 @@ float4 blur_y(uniform bool combine, post_proc_vs_out input) : SV_TARGET
 
 	 if (combine)
 	 {
-		return b / w_total * tex_color.SampleLevel(point_clamp_sampler, input.texcoord, 0);
+		return b / w_total * tex_color.SampleLevel(point_clamp_sampler, float3(input.texcoord, 0), 0);
 	 }
 
 	 return b / w_total; 
@@ -142,7 +142,7 @@ float4 blur_y_ss(uniform bool combine, post_proc_vs_out input) : SV_TARGET
 	
 	if (combine)
 	{
-		return b / w_total * tex_color.SampleLevel(point_clamp_sampler, input.texcoord, 0); 
+		return b / w_total * tex_color.SampleLevel(point_clamp_sampler, float3(input.texcoord, 0), 0); 
 	}
 
 	return b / w_total;
@@ -204,7 +204,7 @@ float4 edge_detect_ps(uniform bool combine, post_proc_vs_out input) : SV_TARGET
 
 float4 pass_through_ps_main(post_proc_vs_out input) : SV_TARGET
 {
-	return tex_color.SampleLevel(point_clamp_sampler, input.texcoord.xy, 0);
+	return tex_color.SampleLevel(point_clamp_sampler, float3(input.texcoord.xy, 0), 0);
 }
 
 technique11 blur_pass_tech

@@ -18,11 +18,11 @@ static hbao_component_ptr g_hbao_renderer;
 static texture_2d_ptr g_gbuf_color_rtt; 
 static texture_2d_ptr g_gbuf_depth_rtt;
 
-hbao_app_params g_hbao_params;
+static hbao_app_params g_hbao_params;
 
-void init_hbao_params()
+static void init_hbao_params()
 {
-	g_hbao_params.radius = 1.0f; 
+	g_hbao_params.radius = 10.0f; 
 	g_hbao_params.step_size = 4; 
 	g_hbao_params.angle_bias = 10.0f;
 	g_hbao_params.stength = 1.0f;

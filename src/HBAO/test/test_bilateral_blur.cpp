@@ -26,8 +26,8 @@ static hbao_bilateral_blur_ptr g_bilateral_blur;
 static texture_2d_ptr g_gbuf_color_rtt; 
 static texture_2d_ptr g_gbuf_depth_rtt;
 
-blur_app_params g_blur_app_params;
-hbao_app_params g_hbao_params;
+static blur_app_params g_blur_app_params;
+static hbao_app_params g_hbao_params;
 
 // ---------------------------------------------------------------------
 /*
@@ -35,17 +35,17 @@ hbao_app_params g_hbao_params;
 */ 
 // ---------------------------------------------------------------------
 
-void init_blur_app_params()
+static void init_blur_app_params()
 {
 	g_blur_app_params.blur_radius = 10; 
 	g_blur_app_params.sharpness = 0; 
 	g_blur_app_params.edge_threshold = 0;
 }
 
-void init_hbao_params()
+static void init_hbao_params()
 {
-	g_hbao_params.radius = 1.0f; 
-	g_hbao_params.step_size = 4; 
+	g_hbao_params.radius = 5.0f; 
+	g_hbao_params.step_size = 8; 
 	g_hbao_params.angle_bias = 10.0f;
 	g_hbao_params.stength = 1.0f;
 	g_hbao_params.power_exponent = 1.0f;
@@ -229,6 +229,20 @@ static void CALLBACK on_frame_render( ID3D11Device* pd3dDevice, ID3D11DeviceCont
 	g_resolver->resolve_depth(g_gbuf_depth_rtt); 
 	PIX_EVENT_END();
 
+	//////////////////////////////////////////////////////////////////////////
+	// Render SSAO and composite 
+	//////////////////////////////////////////////////////////////////////////
+
+	PIX_EVENT_BEGIN(Begin hbao); 
+
+	g_hbao_renderer->set_depth_for_ao(g_resolver->get_resolved_depth(), ZNEAR, ZFAR, 0.0f, 1.0f, 1.0f);
+
+	g_hbao_renderer->set_ao_parameters(g_hbao_params);
+
+	g_hbao_renderer->render_ao(FOVY, g_resolver->get_resolved_color()->get_srv()); 
+
+	PIX_EVENT_END(); 
+	
 
 	//////////////////////////////////////////////////////////////////////////
 	// Start bilateral blur
@@ -239,7 +253,7 @@ static void CALLBACK on_frame_render( ID3D11Device* pd3dDevice, ID3D11DeviceCont
 
 	g_bilateral_blur->set_dest_rtv(bbuf_rtv); 
 	g_bilateral_blur->set_blur_params(g_blur_app_params); 
-	g_bilateral_blur->set_resources(g_resolver->get_resolved_color(), g_resolver->get_resolved_color(), g_resolver->get_resolved_depth(), g_gbuf_depth_rtt); 
+	g_bilateral_blur->set_resources(g_hbao_renderer->get_ao_render_target(), g_resolver->get_resolved_color(), g_resolver->get_resolved_depth(), g_gbuf_depth_rtt); 
 	g_bilateral_blur->on_frame_render(fTime, fElapsedTime); 
 	// g_bilateral_blur->apply_passthrough(bbuf_rtv, g_resolver->get_resolved_color()); 
 	
