@@ -1,5 +1,5 @@
 
-cbuffer cb_hbao_params : register(b0)
+cbuffer cb_hbao_params 
 {
 	float2 g_full_resolution;
 	float2 g_inv_full_resolution;

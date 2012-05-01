@@ -177,7 +177,7 @@ technique11 render_scene_diffuse
         SetGeometryShader(NULL);
         SetPixelShader(CompileShader(ps_5_0, ps_scene_main_nd()));
         
-		SetRasterizerState( rs_multisample );
+		//SetRasterizerState( rs_multisample );
         SetBlendState(bs_noblending, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xffffffff);
         SetDepthStencilState(ds_less_func, 0);
     }

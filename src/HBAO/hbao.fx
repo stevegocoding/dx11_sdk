@@ -1,36 +1,11 @@
+#include "hbao_params_cb.hlsl" 
 #include "fullscreen_triangle_vs.hlsl"
 
-cbuffer cb_hbao_params
-{
-	float2 g_full_resolution;
-	float2 g_inv_full_resolution;
-	
-	float2 g_ao_resolution; 
-	float2 g_inv_ao_resolution;
-	
-	float2 g_focal_len; 
-	float2 g_inv_focal_len; 
-	
-	float2 g_uv_to_view_a; 
-	float2 g_uv_to_view_b;
-
-	float g_r;
-	float g_r2;
-	float g_neg_inv_r2; 
-	float g_max_radius_pixels;
-	
-	float g_angle_bias;
-	float g_tan_angle_bias;
-	float g_pow_exp;
-	float g_strength;
-	
-	float g_blur_depth_threshold;
-	float g_blur_falloff; 
-	float g_lin_a; 
-	float g_lin_b; 
-};
-
+// --------------------------------------------------------
+// Texture Shader Resources for AO rendering
+// --------------------------------------------------------
 Texture2D<float> tex_linear_depth;
+Texture2D<float4> tex_normal;
 Texture2D<float3> tex_random;
 
 #define M_PI 3.14159265f
@@ -39,8 +14,8 @@ Texture2D<float3> tex_random;
 #define USE_NORMAL_FREE_HBAO 0
 
 #define RANDOM_TEXTURE_WIDTH 4
-#define NUM_DIRECTIONS 32
-#define NUM_STEPS 4
+#define NUM_DIRECTIONS 16
+#define NUM_STEPS 8
 
 SamplerState point_clamp_sampler
 {
@@ -86,8 +61,21 @@ float3 uv_to_eye(float2 uv, float eye_z)
 // ---------------------------------------------------------------------
 float3 fetch_eye_pos(float2 uv)
 {
-    float z = tex_linear_depth.SampleLevel(point_clamp_sampler, float3(uv, 0), 0); 
+    float z = tex_linear_depth.SampleLevel(point_clamp_sampler, uv, 0); 
     return uv_to_eye(uv, z); 
+}
+
+float3 tangent_eye_pos(float2 uv, float4 tangent_plane)
+{
+	// View vector going through the surface point at uv
+	float3 v = fetch_eye_pos(uv); 
+	float n_dot_v = dot(tangent_plane.xyz, v);
+
+	// Intersect with tangent plane except for silhouette edges
+	if (n_dot_v < 0.0) 
+		v *= (tangent_plane.w / n_dot_v); 
+	
+	return v;  
 }
 
 float length2(float3 v) 
@@ -108,10 +96,10 @@ float3 min_diff(float3 p, float3 p_right, float3 p_left)
     return (length2(v1) < length2(v2)) ? v1 : v2; 
 }
 
-float2 rotate_direction(float2 dir, float2 cos_sin)
+float2 rotate_direction(float2 direction, float2 cos_sin)
 {
-    return float2(dir.x*cos_sin.x - dir.y*cos_sin.y, 
-                  dir.x*cos_sin.y + dir.y*cos_sin.x);
+    return float2(direction.x*cos_sin.x - direction.y*cos_sin.y, 
+                  direction.x*cos_sin.y + direction.y*cos_sin.x);
 }
 
 float tan_to_sin(float x)
@@ -129,10 +117,11 @@ float2 snap_uv_offset(float2 uv)
     return round(uv * g_ao_resolution) * g_inv_ao_resolution;
 }
 
-float falloff(float d2)
+float falloff(float r)
 {
 	// 1 scalar mad instruction
-    return d2 * g_neg_inv_r2 + 1.0f;
+    // return d2 * g_neg_inv_r2 + 1.0f;
+	return 1.0f - 0.1 * r * r;
 }
 
 float tangent(float3 t)
@@ -142,7 +131,9 @@ float tangent(float3 t)
 
 float biased_tangent(float3 t)
 {
-	return tangent(t) + g_tan_angle_bias; 
+	//return tangent(t) + g_tan_angle_bias; 
+	float phi = atan(tangent(t)) + g_tan_angle_bias; 
+	return tan(min(phi, M_PI*0.5));
 }
 
 float3 tangent_vector(float2 delta_uv, float3 dpdu, float3 dpdv)
@@ -288,33 +279,42 @@ float horizon_occlusion(float2 delta_uv,
 	float3 t = delta_uv.x * dpdu + delta_uv.y * dpdv; 
 	float tan_h = biased_tangent(t);
 
+/*
 #if SAMPLE_FIRST_STEP 
     // Take a first sample between uv0 and uv0 + deltaUV
 	float2 snapped_duv = snap_uv_offset(rand_step * delta_uv + texel_delta_uv); 
 	ao = integrate_occlusion(uv0, snapped_duv, p, dpdu, dpdv, tan_h);
 	--num_steps;
 #endif
+*/
 
 	float sin_h = tan_h / sqrt(1.0f + tan_h *tan_h); 
 	
-	for (float j = 1; j < num_steps; ++j)
+	for (float j = 1; j <= num_steps; ++j)
 	{
 		uv += delta_uv;
 		float3 s = fetch_eye_pos(uv); 
-		float tan_s = tangent(p, s); 
+		
 		float d2 = length2(s - p); 
 		
 		// use a merged dynamic branch
-		[branch]
-		if ( (d2 < g_r2) && (tan_s > tan_h) )
+		
+		if ( d2 < g_r2 )
 		{
-			// Accumulate AO between the horizon and the sample
-			float sin_s = tan_s / sqrt(1.0f + tan_s * tan_s);
-			ao += falloff(d2) * (sin_s - sin_h);
+			float tan_s = tangent(p, s);  
+
+			[branch]
+			if (tan_s > tan_h)
+			{
+				// Accumulate AO between the horizon and the sample
+				float sin_s = tan_s / sqrt(1.0f + tan_s * tan_s);
+				float r = sqrt(d2) / g_r;
+				ao += falloff(r) * (sin_s - sin_h);
 			
-			// Update the current horizon angle 
-			tan_h = tan_s;
-			sin_h = sin_s; 
+				// Update the current horizon angle 
+				tan_h = tan_s;
+				sin_h = sin_s; 
+			}
 		}
 	}
 
@@ -343,37 +343,62 @@ void compute_steps(inout float2 step_size_uv, inout float num_steps, float ray_r
 	step_size_uv = step_size_pix * g_inv_ao_resolution; 
 } 
 
-float2 test_ps(post_proc_vs_out input) : SV_TARGET
+float2 test_ps(uniform bool use_normal, post_proc_vs_out input) : SV_TARGET
 {
 	float3 p = fetch_eye_pos(input.texcoord); 
 
 	// float3 rand = tex_random.SampleLevel(point_wrap_sampler, input.pos.xy / RANDOM_TEXTURE_WIDTH, 0);
 	float3 rand = tex_random.Load(int3((int)input.pos.x&63, (int)input.pos.y&63, 0)).xyz;
 	
-	// float3 rand = (float3)0.5; 
-	// rand.z = 0.5;
-
-	float3 temp = rand * (float)1;
-	
 	// Compute projection of disk of radius g_R into uv space
     // Multiply by 0.5 to scale from [-1,1]^2 to [0,1]^2
-	float2 ray_radius_uv = float2((0.5 * g_r * g_focal_len.x / p.z), (0.5 * g_r * g_focal_len.y / p.z)); 
-	float ray_radius_pix = ray_radius_uv.x * g_ao_resolution.x;
+	// float2 ray_radius_uv = float2((0.5 * g_r * g_focal_len.x / p.z), (0.5 * g_r * g_focal_len.y / p.z)); 
+	float2 ray_radius_uv = 0.5 * g_r * g_focal_len / p.z; 
+	float ray_radius_pix = min(ray_radius_uv.x * g_ao_resolution.x, ray_radius_uv.y * g_ao_resolution.y);
 	if (ray_radius_pix < 1)
 		return 1.0; 
 
+	float num_steps = min(NUM_STEPS, ray_radius_pix);
+	if (num_steps < 1.0) 
+		return 1.0; 
+	float step_size_pix = ray_radius_pix / (num_steps + 1); 
+	float max_num_steps = g_max_radius_pixels / step_size_pix; 
+
+	// float2 step_size = ray_radius_uv / (num_steps + 1); 
+	float2 step_size = step_size_pix * g_inv_ao_resolution;
+
+	/*
 	// Determine the sampling steps 
 	float num_steps;
 	float2 step_size = (float2)0;			// step size in U-V space
 	compute_steps(step_size, num_steps, ray_radius_pix, rand.z);
+	*/
+
 
     // Nearest neighbor pixels on the tangent plane
     float3 p_left, p_right, p_top, p_bottom;
     float4 tangent_plane;
-	p_right = fetch_eye_pos(input.texcoord + float2(g_inv_ao_resolution.x, 0)); 
-	p_left = fetch_eye_pos(input.texcoord + float2(-g_inv_ao_resolution.x, 0)); 
-	p_top = fetch_eye_pos(input.texcoord + float2(0, g_inv_ao_resolution.y)); 
-	p_bottom = fetch_eye_pos(input.texcoord + float2(0, -g_inv_ao_resolution.y)); 
+
+	if (use_normal)
+	{
+		float3 n = tex_normal.SampleLevel(point_clamp_sampler, input.texcoord, 0).xyz; 
+		n = normalize(n); 
+		tangent_plane = float4(n, dot(p, n));
+		p_right = tangent_eye_pos(input.texcoord + float2(g_inv_ao_resolution.x, 0), tangent_plane); 
+		p_left = tangent_eye_pos(input.texcoord + float2(-g_inv_ao_resolution.x, 0), tangent_plane); 
+		p_top = tangent_eye_pos(input.texcoord + float2(0, g_inv_ao_resolution.y), tangent_plane); 
+		p_bottom = tangent_eye_pos(input.texcoord + float2(0, -g_inv_ao_resolution.y), tangent_plane); 
+		
+	}
+	else 
+	{
+		p_right = fetch_eye_pos(input.texcoord + float2(g_inv_ao_resolution.x, 0)); 
+		p_left = fetch_eye_pos(input.texcoord + float2(-g_inv_ao_resolution.x, 0)); 
+		p_top = fetch_eye_pos(input.texcoord + float2(0, g_inv_ao_resolution.y)); 
+		p_bottom = fetch_eye_pos(input.texcoord + float2(0, -g_inv_ao_resolution.y)); 
+		float3 n = cross(p_right - p_left, p_top - p_bottom); 
+		n = normalize(n); 
+	}
 	
 	// Screen-aligned basis for the tangent plane
     float3 dPdu = min_diff(p, p_right, p_left);
@@ -382,8 +407,9 @@ float2 test_ps(post_proc_vs_out input) : SV_TARGET
 	// Calculate the AO for each direction 
 	float ao = 0; 
 	float d; 
-	float alpha = 2.0f * M_PI / NUM_DIRECTIONS; 
+	float alpha = 2.0f * M_PI / 32; 
 
+	/*
 #if USE_NORMAL_FREE_HBAO
     for (d = 0; d < NUM_DIRECTIONS*0.5; ++d)
     {
@@ -395,31 +421,35 @@ float2 test_ps(post_proc_vs_out input) : SV_TARGET
 	}
 	ao *= 2.0;
 #else 
+*/
+
 	for (d = 0; d < NUM_DIRECTIONS; ++d)
 	{
 		float angle = alpha * d; 
-		// float2 dir = rotate_direction(float2(cos(angle), sin(angle)), rand.xy); 
-		float2 dir = float2(cos(angle), sin(angle));
-		float delta_uv = dir * step_size.xy;
+		float2 dir = rotate_direction(float2(cos(angle), sin(angle)), rand.xy); 
+		//float2 dir = float2(cos(angle), sin(angle));
+		float2 delta_uv = dir * step_size.xy;
 		float2 texel_delta_uv = dir * g_inv_ao_resolution; 
 		ao += horizon_occlusion(delta_uv, texel_delta_uv, input.texcoord, p, num_steps, rand.z, dPdu, dPdv);
 	}
+ 
+// #endif 
 
-#endif 
+
 	ao = 1.0 - ao / NUM_DIRECTIONS * g_strength; 
 
 	return float2(ao, p.z); 
+
 }
 
-
-technique10 hbao_default_tech
+technique11 hbao_default_tech
 {   
     pass p0
     {
         SetVertexShader( CompileShader( vs_5_0, fullscreen_triangle_vs_main() ) );
         SetGeometryShader( NULL );
         //SetPixelShader( CompileShader( ps_5_0, horizon_based_ao_ps_main(false, 1) ) );
-		SetPixelShader( CompileShader( ps_5_0, test_ps() ) );
+		SetPixelShader( CompileShader( ps_5_0, test_ps(true) ) );
         SetBlendState( disable_blend, float4( 0.0f, 0.0f, 0.0f, 0.0f ), 0xFFFFFFFF );
         SetDepthStencilState( disable_depth, 0 );
     }

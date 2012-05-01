@@ -6,7 +6,7 @@
 #include "fullscreen_triangle_vs.hlsl"
 
 Texture2D<float> tex_depth;					// linear dpeth 
-Texture2DMS<float, NUM_MSAA_SAMPLES> tex_msaa_depth;
+Texture2DMS<float> tex_msaa_depth;
 Texture2D<float> tex_source;				// ao texture
 Texture2D<float4> tex_color;					// diffuse color texture
 

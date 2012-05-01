@@ -5,6 +5,7 @@
 #include "hbao_renderer.h"
 #include "hbao_gui.h"
 
+/*
 hbao_app_ptr g_app;
 
 //////////////////////////////////////////////////////////////////////////
@@ -230,3 +231,4 @@ LRESULT c_hbao_application::msg_proc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM
     
     return 0;
 }
+*/

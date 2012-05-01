@@ -43,6 +43,7 @@ HRESULT c_hbao_scene_component::on_create_resource(const render_sys_context_ptr&
 
 void c_hbao_scene_component::on_release_resource()
 {
+	
 }
 
 HRESULT c_hbao_scene_component::setup_geometry(const render_sys_context_ptr& render_sys_context)
@@ -64,9 +65,9 @@ HRESULT c_hbao_scene_component::setup_geometry(const render_sys_context_ptr& ren
     
     //////////////////////////////////////////////////////////////////////////
     // Load mesh
-    //m_meshes.push_back(mesh_desc_ptr(new c_sdkmesh_wrapper(render_sys_context->get_d3d11_device(), L"dragon", mesh_path_prefix+std::wstring(L"dragon.sdkmesh"), true)));
+    m_meshes.push_back(mesh_desc_ptr(new c_sdkmesh_wrapper(render_sys_context->get_d3d11_device(), L"dragon", mesh_path_prefix+std::wstring(L"dragon.sdkmesh"), true)));
     //m_meshes.push_back(mesh_desc_ptr(new c_sdkmesh_wrapper(render_sys_context->get_d3d11_device(), L"sibenik", mesh_path_prefix+std::wstring(L"Sibenik.sdkmesh"), false)));
-	m_meshes.push_back(mesh_desc_ptr(new c_sdkmesh_wrapper(render_sys_context->get_d3d11_device(), L"cornel_box", mesh_path_prefix+std::wstring(L"cornell_box.sdkmesh"), false)));
+	//m_meshes.push_back(mesh_desc_ptr(new c_sdkmesh_wrapper(render_sys_context->get_d3d11_device(), L"cornel_box", mesh_path_prefix+std::wstring(L"cornell_box.sdkmesh"), false)));
     
     return S_OK;
 }
@@ -137,11 +138,12 @@ void c_hbao_scene_component::setup_camera(const render_sys_context_ptr& render_s
     float aspect_ratio = (float)bbuf_width / (float)bbuf_height;
    
     m_camera.reset(new CModelViewerCamera());
-    XMVECTOR lookat = XMVectorSet(0.0f, 0.8f, -2.3f, 1.0f);
+    // XMVECTOR lookat = XMVectorSet(0.0f, 0.8f, -2.3f, 1.0f);
+	XMVECTOR lookat = XMVectorSet(0.0f, 0.8f, -1.3f, 1.0f);
     XMVECTOR eye_pos = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
     
     m_camera->SetViewParams((D3DXVECTOR3*)&lookat, (D3DXVECTOR3*)&eye_pos);
-    m_camera->SetProjParams( D3DX_PI / 4, aspect_ratio, 1.0f, 200.0f ); 
+    m_camera->SetProjParams( 40 * D3DX_PI / 180, aspect_ratio, 0.1f, 500.0f ); 
     m_camera->SetWindow( bbuf_width, bbuf_height ); 
     m_camera->SetButtonMasks( MOUSE_MIDDLE_BUTTON, MOUSE_WHEEL, MOUSE_LEFT_BUTTON );
 }

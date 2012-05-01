@@ -57,8 +57,6 @@ set(SOURCE_FILES
 	hbao_app.cpp
 	hbao_scene.h
 	hbao_scene.cpp
-	hbao_resolve.h
-	hbao_resolve.cpp
 	hbao_renderer.h
 	hbao_renderer.cpp
 	hbao_bilateral_blur.h
@@ -75,26 +73,24 @@ set(SOURCE_FILES
 set(FX_FILES
 	scene.fx
 	hbao.fx
-	resolve.fx
-	blur_composite.fx
 	bilateral_blur.fx
-    fullscreen_triangle_vs.hlsl
-    hbao_params_cb.hlsl
-    linearize_depth_ps.hlsl)
+	linearize_depth_non_msaa.fx
+	resolve_linearize_nd_msaa.fx
+	fullscreen_triangle_vs.hlsl
+	hbao_params_cb.hlsl
+	)
     
 set(TEST_FILES
-    test/tests.h
-    test/tests.cpp
-    test/test_scene.h
-    test/test_scene.cpp
-    test/test_resolve.h
-    test/test_resolve.cpp
-    test/test_hbao.h
-    test/test_hbao.cpp
+	test/tests.h
+	test/tests.cpp
+	test/test_scene.h
+	test/test_scene.cpp
+	test/test_hbao.h
+	test/test_hbao.cpp
 	test/test_bilateral_blur.h
 	test/test_bilateral_blur.cpp
-    test/dxut_test_fixture.h
-    test/dxut_test_fixture.cpp)
+	test/dxut_test_fixture.h
+	test/dxut_test_fixture.cpp)
 
 set(SRC_FILES ${SOURCE_FILES} ${FX_FILES} ${TEST_FILES})
 

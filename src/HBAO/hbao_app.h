@@ -11,6 +11,7 @@ typedef boost::shared_ptr<c_hbao_resolve_component> hbao_resolve_ptr;
 typedef boost::shared_ptr<c_hbao_renderer_component> hbao_engine_ptr; 
 typedef boost::shared_ptr<c_hbao_gui_component> hbao_gui_ptr;
 
+/*
 class c_hbao_application : public c_demo_app_listener
 {
 public:
@@ -28,11 +29,11 @@ private:
     void init_gui();
     HRESULT create_buffers();
 
-    /*
-    HRESULT create_gbuf_color_rtt(); 
-    HRESULT create_gbuf_normal_rtt(); 
-    HRESULT create_gbuf_depth_rtt(); 
-    */
+    
+    //HRESULT create_gbuf_color_rtt(); 
+    //HRESULT create_gbuf_normal_rtt(); 
+    //HRESULT create_gbuf_depth_rtt(); 
+    
 
     void release_buffers(); 
    
@@ -55,3 +56,5 @@ private:
 
 typedef boost::shared_ptr<c_hbao_application> hbao_app_ptr; 
 extern hbao_app_ptr g_app;
+
+*/

@@ -12,19 +12,19 @@
 
 static render_sys_context_ptr g_render_context;
 static hbao_scene_ptr g_scene; 
-static hbao_resolve_ptr g_resolver;
 static hbao_component_ptr g_hbao_renderer;
 
 static texture_2d_ptr g_gbuf_color_rtt; 
+static texture_2d_ptr g_gbuf_normal_rtt; 
 static texture_2d_ptr g_gbuf_depth_rtt;
 
 static hbao_app_params g_hbao_params;
 
 static void init_hbao_params()
 {
-	g_hbao_params.radius = 10.0f; 
+	g_hbao_params.radius = 0.35f; 
 	g_hbao_params.step_size = 4; 
-	g_hbao_params.angle_bias = 10.0f;
+	g_hbao_params.angle_bias = 20.0f;
 	g_hbao_params.stength = 1.0f;
 	g_hbao_params.power_exponent = 1.0f;
 	g_hbao_params.blur_radius = 16; 
@@ -46,6 +46,9 @@ static void create_gbuf_rtts(int samples, int quality)
     memset(&srv_desc, 0, sizeof(D3D11_SHADER_RESOURCE_VIEW_DESC));
     memset(&dsv_desc, 0, sizeof(D3D11_DEPTH_STENCIL_VIEW_DESC)); 
 
+	//////////////////////////////////////////////////////////////////////////
+	// Create color render texture
+	//////////////////////////////////////////////////////////////////////////
     tex_desc.Width = g_render_context->get_bbuf_desc()->Width;
     tex_desc.Height = g_render_context->get_bbuf_desc()->Height;
     tex_desc.ArraySize = 1;
@@ -75,9 +78,22 @@ static void create_gbuf_rtts(int samples, int quality)
     g_gbuf_color_rtt->bind_rt_view(NULL); 
     g_gbuf_color_rtt->bind_sr_view(&srv_desc);
 
+	//////////////////////////////////////////////////////////////////////////
+	// Create normal render texture 
+	//////////////////////////////////////////////////////////////////////////
+	tex_desc.Format = DXGI_FORMAT_R8G8B8A8_SNORM;
+	srv_desc.Format = DXGI_FORMAT_R8G8B8A8_SNORM;
+	g_gbuf_normal_rtt.reset(new c_texture2D(g_render_context, &tex_desc, NULL)); 
+	g_gbuf_normal_rtt->bind_rt_view(NULL); 
+	g_gbuf_normal_rtt->bind_sr_view(&srv_desc); 
+
+	//////////////////////////////////////////////////////////////////////////
+	// Create depth render texture
+	//////////////////////////////////////////////////////////////////////////
     tex_desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_DEPTH_STENCIL; 
     tex_desc.Format = DXGI_FORMAT_R24G8_TYPELESS; 
     dsv_desc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	dsv_desc.Flags = 0; 
     srv_desc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
 
     if (samples > 1)
@@ -89,6 +105,8 @@ static void create_gbuf_rtts(int samples, int quality)
     {
         dsv_desc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D; 
 		srv_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+		srv_desc.Texture2D.MipLevels = 1; 
+		srv_desc.Texture2D.MostDetailedMip = 0;
         dsv_desc.Texture2D.MipSlice = 0;
     }
     g_gbuf_depth_rtt.reset(new c_texture2D(g_render_context, &tex_desc, NULL));
@@ -105,7 +123,6 @@ static HRESULT CALLBACK on_device_create( ID3D11Device* pd3dDevice, const DXGI_S
         DXUTGetDXGISwapChain())); 
 
     g_scene->on_create_resource(g_render_context); 
-    g_resolver->on_create_resource(g_render_context);
     g_hbao_renderer->on_create_resource(g_render_context); 
 
 	init_hbao_params();
@@ -118,13 +135,12 @@ static HRESULT CALLBACK on_device_create( ID3D11Device* pd3dDevice, const DXGI_S
 static void CALLBACK on_device_destroy( void* pUserContext )
 {
     g_scene->on_release_resource(); 
-    g_resolver->on_release_resource();
 
     g_gbuf_color_rtt.reset(); 
+	g_gbuf_normal_rtt.reset();
     g_gbuf_depth_rtt.reset(); 
 
     g_scene.reset();
-    g_resolver.reset(); 
     g_hbao_renderer.reset();
     g_render_context.reset();
 }
@@ -133,21 +149,14 @@ static HRESULT CALLBACK on_swap_chain_resize( ID3D11Device* pd3dDevice, IDXGISwa
     const DXGI_SURFACE_DESC* pBackBufferSurfaceDesc, void* pUserContext )
 {
     create_gbuf_rtts(8, 0); 
-
-    g_resolver->set_input_rt_size(pBackBufferSurfaceDesc->Width, pBackBufferSurfaceDesc->Height);
-    g_resolver->set_output_rt_size(pBackBufferSurfaceDesc->Width, pBackBufferSurfaceDesc->Height);
-    g_resolver->set_num_samples(8);
-    g_resolver->set_z_near_far(1.0f, 200.0f); 
-
-    g_resolver->on_swap_chain_resized(swap_chain_resize_event(
-        pBackBufferSurfaceDesc->Width, pBackBufferSurfaceDesc->Height));
+	//create_color_normal_rtt(8, 0); 
+	//create_depth_stencil_rtt(); 
 
     return S_OK;
 }
 
 static void CALLBACK on_swap_chain_release( void* pUserContext )
 {
-    g_resolver->on_swap_chain_released();
 }
 
 static void CALLBACK on_frame_move( double fTime, float fElapsedTime, void* pUserContext )
@@ -168,16 +177,17 @@ static void CALLBACK on_frame_render( ID3D11Device* pd3dDevice, ID3D11DeviceCont
     pd3dImmediateContext->ClearRenderTargetView(g_gbuf_color_rtt->get_rtv(), clear_color); 
     pd3dImmediateContext->ClearDepthStencilView(g_gbuf_depth_rtt->get_dsv(), D3D11_CLEAR_DEPTH, 1.0f, 0);
 
-	ID3D11RenderTargetView *rtvs[] = {g_gbuf_color_rtt->get_rtv()};
+	ID3D11RenderTargetView *rtvs[] = {g_gbuf_color_rtt->get_rtv(), g_gbuf_normal_rtt->get_rtv()};
 	ID3D11DepthStencilView *dsv = g_gbuf_depth_rtt->get_dsv(); 
 
     PIX_EVENT_BEGIN(Begin scene on_frame_render);
     
     PIX_EVENT_SET_RENDER_TARGETS(); 
-    pd3dImmediateContext->OMSetRenderTargets(1, rtvs, g_gbuf_depth_rtt->get_dsv());
+    pd3dImmediateContext->OMSetRenderTargets(2, rtvs, g_gbuf_depth_rtt->get_dsv());
     g_scene->on_frame_render(fTime, fElapsedTime);
     PIX_EVENT_END();
     
+	/*
     ////////////////////////////////////////////////////////////////////////// 
     // Resolve the depth
     //////////////////////////////////////////////////////////////////////////
@@ -186,8 +196,9 @@ static void CALLBACK on_frame_render( ID3D11Device* pd3dDevice, ID3D11DeviceCont
     PIX_EVENT_END();
 
     PIX_EVENT_BEGIN(Begin resolve resolve_nd); 
-    g_resolver->resolve_depth(g_gbuf_depth_rtt); 
+    g_resolver->resolve_normal_depth(g_gbuf_normal_rtt, g_gbuf_depth_rtt); 
     PIX_EVENT_END();
+	*/
 
     //////////////////////////////////////////////////////////////////////////
     // Render SSAO and composite 
@@ -200,31 +211,27 @@ static void CALLBACK on_frame_render( ID3D11Device* pd3dDevice, ID3D11DeviceCont
 	
 	PIX_EVENT_BEGIN(Begin hbao); 
 
-	g_hbao_renderer->set_depth_for_ao(g_resolver->get_resolved_depth(), ZNEAR, ZFAR, 0.0f, 1.0f, 1.0f);
+	g_hbao_renderer->set_normal_depth_for_ao(g_gbuf_normal_rtt, g_gbuf_depth_rtt, ZNEAR, ZFAR, 0.0f, 1.0f, 1.0f);
+	g_hbao_renderer->set_color_info(g_gbuf_color_rtt);
 
 	g_hbao_renderer->set_ao_parameters(g_hbao_params);
 
-	g_hbao_renderer->render_ao(FOVY, g_resolver->get_resolved_color()->get_srv(), backbuf_color_rtv); 
+	g_hbao_renderer->render_ao(FOVY); 
 
-	g_hbao_renderer->render_blur_x(); 
-
-	g_hbao_renderer->render_blur_y(); 
-	
 	PIX_EVENT_END(); 
 
-    PIX_EVENT_END_FRAME(); 
+	PIX_EVENT_END_FRAME(); 
 }
 
 static LRESULT CALLBACK msg_proc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, bool* pbNoFurtherProcessing, void* pUserContext )
 {
-    g_scene->msg_proc(hWnd, uMsg, wParam, lParam, pbNoFurtherProcessing, pUserContext);
+	g_scene->msg_proc(hWnd, uMsg, wParam, lParam, pbNoFurtherProcessing, pUserContext);
     return 0;
 }
 
 void c_hbao_test_fixture::setup()
 {
     g_scene.reset(new c_hbao_scene_component());
-    g_resolver.reset(new c_hbao_resolve_component());
     g_hbao_renderer.reset(new c_hbao_renderer_component(FOVY));
     
     setup_dxut_callbacks(on_device_create, 
