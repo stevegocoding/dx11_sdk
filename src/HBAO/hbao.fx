@@ -47,11 +47,11 @@ BlendState disable_blend
 
 float3 uv_to_eye(float2 uv, float eye_z)
 {
-	//uv = g_uv_to_view_a * uv + g_uv_to_view_b;
-	//return float3(uv * eye_z, eye_z);  
+	uv = g_uv_to_view_a * uv + g_uv_to_view_b;
+	return float3(uv * eye_z, eye_z);  
 
-	uv = (uv * float2(2.0, -2.0) - float2(1.0, -1.0)); 
-	return float3(uv * g_inv_focal_len * eye_z, eye_z); 
+	//uv = (uv * float2(2.0, -2.0) - float2(1.0, -1.0)); 
+	//return float3(uv * g_inv_focal_len * eye_z, eye_z); 
 }
 
 // ---------------------------------------------------------------------
@@ -120,8 +120,8 @@ float2 snap_uv_offset(float2 uv)
 float falloff(float r)
 {
 	// 1 scalar mad instruction
-    // return d2 * g_neg_inv_r2 + 1.0f;
-	return 1.0f - 0.1 * r * r;
+    // return r * g_neg_inv_r2 + 1.0f;
+	return 1.0f - 1.0f * r * r;
 }
 
 float tangent(float3 t)
@@ -343,7 +343,7 @@ void compute_steps(inout float2 step_size_uv, inout float num_steps, float ray_r
 	step_size_uv = step_size_pix * g_inv_ao_resolution; 
 } 
 
-float2 test_ps(uniform bool use_normal, post_proc_vs_out input) : SV_TARGET
+float4 test_ps(uniform bool use_normal, post_proc_vs_out input) : SV_TARGET
 {
 	float3 p = fetch_eye_pos(input.texcoord); 
 
@@ -379,6 +379,7 @@ float2 test_ps(uniform bool use_normal, post_proc_vs_out input) : SV_TARGET
     float3 p_left, p_right, p_top, p_bottom;
     float4 tangent_plane;
 
+	
 	if (use_normal)
 	{
 		float3 n = tex_normal.SampleLevel(point_clamp_sampler, input.texcoord, 0).xyz; 
@@ -407,7 +408,7 @@ float2 test_ps(uniform bool use_normal, post_proc_vs_out input) : SV_TARGET
 	// Calculate the AO for each direction 
 	float ao = 0; 
 	float d; 
-	float alpha = 2.0f * M_PI / 32; 
+	float alpha = 2.0f * M_PI / NUM_DIRECTIONS; 
 
 	/*
 #if USE_NORMAL_FREE_HBAO
@@ -438,8 +439,7 @@ float2 test_ps(uniform bool use_normal, post_proc_vs_out input) : SV_TARGET
 
 	ao = 1.0 - ao / NUM_DIRECTIONS * g_strength; 
 
-	return float2(ao, p.z); 
-
+	return ao; 
 }
 
 technique11 hbao_default_tech

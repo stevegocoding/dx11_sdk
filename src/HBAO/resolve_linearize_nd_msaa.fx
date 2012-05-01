@@ -2,7 +2,7 @@
 #include "fullscreen_triangle_vs.hlsl"
 
 Texture2DMS<float> tex_non_linear_depth;
-Texture2DMS<float4> tex_msaa_normal; 
+Texture2DMS<float3> tex_msaa_normal; 
 
 SamplerState point_clamp_sampler
 {
@@ -42,7 +42,7 @@ resolve_ps_output resolve_linearize_normal_depth_msaa_ps_main(post_proc_vs_out i
 	float z = tex_non_linear_depth.Load(int2(input.pos.xy), 0); 
 	 
 	output.depth = 1.0f / (z * g_lin_a + g_lin_b);
-	output.normal = tex_msaa_normal.Load(int2(input.pos.xy), 0).xyz;
+	output.normal = tex_msaa_normal.Load(int2(input.pos.xy), 0);
 	
 	return output; 
 }

@@ -37,17 +37,17 @@ static hbao_app_params g_hbao_params;
 
 static void init_blur_app_params()
 {
-	g_blur_app_params.blur_radius = 10; 
+	g_blur_app_params.blur_radius = 5; 
 	g_blur_app_params.sharpness = 0; 
 	g_blur_app_params.edge_threshold = 0;
 }
 
 static void init_hbao_params()
 {
-	g_hbao_params.radius = 0.2f; 
-	g_hbao_params.step_size = 8; 
-	g_hbao_params.angle_bias = 0.0f;
-	g_hbao_params.stength = 1.0f;
+	g_hbao_params.radius = 0.4f; 
+	g_hbao_params.step_size = 4; 
+	g_hbao_params.angle_bias = 30.0f;
+	g_hbao_params.stength = 2.0f;
 	g_hbao_params.power_exponent = 1.0f;
 	g_hbao_params.blur_radius = 4; 
 	g_hbao_params.blur_sharpness = 8.0f; 
@@ -99,6 +99,8 @@ static void create_gbuf_rtts(int samples, int quality)
 	//////////////////////////////////////////////////////////////////////////
 	// Create normal render texture 
 	//////////////////////////////////////////////////////////////////////////
+	tex_desc.Format = DXGI_FORMAT_R8G8B8A8_SNORM;
+	srv_desc.Format = DXGI_FORMAT_R8G8B8A8_SNORM;
 	g_gbuf_normal_rtt.reset(new c_texture2D(g_render_context, &tex_desc, NULL)); 
 	g_gbuf_normal_rtt->bind_rt_view(NULL); 
 	g_gbuf_normal_rtt->bind_sr_view(&srv_desc); 
@@ -171,7 +173,7 @@ static HRESULT CALLBACK on_swap_chain_resize( ID3D11Device* pd3dDevice, IDXGISwa
 	unsigned int bbuf_width = pBackBufferSurfaceDesc->Width; 
 	unsigned int bbuf_height = pBackBufferSurfaceDesc->Height; 
 
-	create_gbuf_rtts(NUM_MSAA_SAMPLES, 0);
+	create_gbuf_rtts(NUM_MSAA_SAMPLES, 8);
 	
 	g_bilateral_blur->set_num_samples(NUM_MSAA_SAMPLES); 
 	

@@ -110,8 +110,8 @@ float4 calculate_shading(ps_scene_input input)
     if (!input.front_facing)
         input.normal = -input.normal;
    
-    // float4 key_light_color = float4(.457,.722 , 0.0 ,1);
-    float4 key_light_color = float4(1, 1, 1, 1);
+    float4 key_light_color = float4(.457,.722 , 0.0 ,1);
+    //float4 key_light_color = float4(1, 1, 1, 1);
     float3 l = normalize(input.key_light_pos - input.vpos);
     float4 diffuse_key_light_color = key_light_color * (0.5 + saturate(dot(input.normal, l)) * 0.5);
     
@@ -177,7 +177,7 @@ technique11 render_scene_diffuse
         SetGeometryShader(NULL);
         SetPixelShader(CompileShader(ps_5_0, ps_scene_main_nd()));
         
-		//SetRasterizerState( rs_multisample );
+		SetRasterizerState( rs_multisample );
         SetBlendState(bs_noblending, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xffffffff);
         SetDepthStencilState(ds_less_func, 0);
     }

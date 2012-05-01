@@ -65,8 +65,8 @@ HRESULT c_hbao_scene_component::setup_geometry(const render_sys_context_ptr& ren
     
     //////////////////////////////////////////////////////////////////////////
     // Load mesh
-    m_meshes.push_back(mesh_desc_ptr(new c_sdkmesh_wrapper(render_sys_context->get_d3d11_device(), L"dragon", mesh_path_prefix+std::wstring(L"dragon.sdkmesh"), true)));
-    //m_meshes.push_back(mesh_desc_ptr(new c_sdkmesh_wrapper(render_sys_context->get_d3d11_device(), L"sibenik", mesh_path_prefix+std::wstring(L"Sibenik.sdkmesh"), false)));
+    //m_meshes.push_back(mesh_desc_ptr(new c_sdkmesh_wrapper(render_sys_context->get_d3d11_device(), L"dragon", mesh_path_prefix+std::wstring(L"dragon.sdkmesh"), true)));
+    m_meshes.push_back(mesh_desc_ptr(new c_sdkmesh_wrapper(render_sys_context->get_d3d11_device(), L"sibenik", mesh_path_prefix+std::wstring(L"Sibenik.sdkmesh"), false)));
 	//m_meshes.push_back(mesh_desc_ptr(new c_sdkmesh_wrapper(render_sys_context->get_d3d11_device(), L"cornel_box", mesh_path_prefix+std::wstring(L"cornell_box.sdkmesh"), false)));
     
     return S_OK;
@@ -234,7 +234,7 @@ void c_hbao_scene_component::update_transform_params(const XMMATRIX& mat_world, 
     cb0 cb;
     cb.mat_wvp = XMMatrixTranspose(mat_wvp);
     cb.mat_wv = XMMatrixTranspose(mat_wv); 
-    cb.mat_wv_it = XMMatrixTranspose(XMMatrixTranspose(XMMatrixInverse(&det, mat_wv))); 
+    cb.mat_wv_it = XMMatrixTranspose(XMMatrixInverse(&det, mat_wv)); 
 
     device_context->UpdateSubresource(m_cb0, 0, NULL, &cb, 0, 0);
     m_param_cb0->SetConstantBuffer(m_cb0);

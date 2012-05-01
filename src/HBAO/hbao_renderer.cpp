@@ -79,7 +79,7 @@ public:
 	{
 		if (!m_resolved_normal_tex)
 		{
-			m_resolved_normal_tex = make_simple_rt(m_render_context, m_full_width, m_full_height, DXGI_FORMAT_R8G8B8A8_SNORM);
+			m_resolved_normal_tex = make_simple_rt(m_render_context, m_full_width, m_full_height, DXGI_FORMAT_R16G16B16A16_SNORM);
 		}
 		return m_resolved_normal_tex; 
 	}
