@@ -3,6 +3,7 @@
 #include "test/test_resolve.h"
 #include "test/test_hbao.h"
 #include "test/test_bilateral_blur.h"
+#include "test/test_hud_gui.h"
 
 //render_sys_context_ptr g_render_sys_context;
 
@@ -66,23 +67,31 @@
 c_scene_test_fixture g_scene_test; 
 c_hbao_test_fixture g_hbao_test;
 c_bilateral_blur_test_fixture g_bilateral_blur_test;
+c_hud_gui_test_fixture g_gui_test;
 
-static void setup_hbao_test()
+static void start_hbao_test()
 {
 	g_hbao_test.setup();   
 	g_hbao_test.tear_down(); 
 }
 
-static void setup_bilateral_test()
+static void start_bilateral_test()
 {
 	g_bilateral_blur_test.setup();
 	g_bilateral_blur_test.tear_down();
 }
 
+static void start_gui_test()
+{
+	g_gui_test.setup();
+	g_gui_test.tear_down();
+}
+
 int WINAPI wWinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nCmdShow )
 {
 	//setup_hbao_test(); 
-	setup_bilateral_test();
+	//start_bilateral_test();
+	start_gui_test(); 
 	
     return DXUTGetExitCode();
 }

@@ -89,6 +89,8 @@ set(TEST_FILES
 	test/test_hbao.cpp
 	test/test_bilateral_blur.h
 	test/test_bilateral_blur.cpp
+	test/test_hud_gui.h
+	test/test_hud_gui.cpp
 	test/dxut_test_fixture.h
 	test/dxut_test_fixture.cpp)
 

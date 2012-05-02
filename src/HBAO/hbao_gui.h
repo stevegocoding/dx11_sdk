@@ -105,7 +105,7 @@ class c_hbao_gui_component : public c_demo_app_listener
     typedef c_demo_app_listener super;
 
 public:
-    explicit c_hbao_gui_component();
+    explicit c_hbao_gui_component(const std::string& layout_name);
     virtual HRESULT on_create_resource(const render_sys_context_ptr& render_sys_context);
     virtual void on_release_resource(); 
     virtual void on_frame_render(double time, float elapsed_time); 
@@ -126,5 +126,7 @@ private:
     CEGUI::Direct3D11Renderer *m_d3d11_renderer;
     main_wnd_ptr m_default_wnd;
     bool m_mouse_in_wnd;
+
+	std::string m_layout_file_name;
 };
-typedef boost::shared_ptr<c_hbao_gui_component> hbao_gui_ptr;
+typedef boost::shared_ptr<c_hbao_gui_component> hbao_gui_ptr; 
