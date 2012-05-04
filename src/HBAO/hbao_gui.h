@@ -105,7 +105,7 @@ class c_hbao_gui_component : public c_demo_app_listener
     typedef c_demo_app_listener super;
 
 public:
-    explicit c_hbao_gui_component(const std::string& layout_name);
+    explicit c_hbao_gui_component(const std::string& layout_name = std::string());
     virtual HRESULT on_create_resource(const render_sys_context_ptr& render_sys_context);
     virtual void on_release_resource(); 
     virtual void on_frame_render(double time, float elapsed_time); 
@@ -115,6 +115,8 @@ public:
     // Application Events
     virtual void on_swap_chain_resized(const swap_chain_resize_event& event);
     virtual void on_swap_chain_released(); 
+
+	virtual void setup_ui();
 
 private:
     void mouse_enters();
@@ -128,5 +130,7 @@ private:
     bool m_mouse_in_wnd;
 
 	std::string m_layout_file_name;
+	
+	bool m_manual_setup_ui; 
 };
 typedef boost::shared_ptr<c_hbao_gui_component> hbao_gui_ptr; 

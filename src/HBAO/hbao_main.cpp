@@ -90,8 +90,8 @@ static void start_gui_test()
 int WINAPI wWinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nCmdShow )
 {
 	//setup_hbao_test(); 
-	//start_bilateral_test();
-	start_gui_test(); 
+	start_bilateral_test();
+	//start_gui_test(); 
 	
     return DXUTGetExitCode();
 }

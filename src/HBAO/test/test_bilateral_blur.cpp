@@ -4,8 +4,10 @@
 #include "../hbao_resolve.h"
 #include "../hbao_bilateral_blur.h"
 #include "../hbao_renderer.h"
+#include "../hbao_gui.h"
 
 #include "test_bilateral_blur.h"
+
 
 #define NUM_MSAA_SAMPLES 8
 #define FOVY (40.0f * D3DX_PI / 180.0f)
@@ -21,6 +23,7 @@ static render_sys_context_ptr g_render_context;
 static hbao_scene_ptr g_scene; 
 static hbao_component_ptr g_hbao_renderer;
 static hbao_bilateral_blur_ptr g_bilateral_blur; 
+static hbao_gui_ptr g_gui; 
 
 static texture_2d_ptr g_gbuf_color_rtt; 
 static texture_2d_ptr g_gbuf_normal_rtt; 
@@ -37,17 +40,17 @@ static hbao_app_params g_hbao_params;
 
 static void init_blur_app_params()
 {
-	g_blur_app_params.blur_radius = 5; 
-	g_blur_app_params.sharpness = 0; 
+	g_blur_app_params.blur_radius = 3; 
+	g_blur_app_params.sharpness = 5; 
 	g_blur_app_params.edge_threshold = 0;
 }
 
 static void init_hbao_params()
 {
-	g_hbao_params.radius = 0.4f; 
+	g_hbao_params.radius = 0.5f; 
 	g_hbao_params.step_size = 4; 
-	g_hbao_params.angle_bias = 30.0f;
-	g_hbao_params.stength = 2.0f;
+	g_hbao_params.angle_bias = 10.0f;
+	g_hbao_params.stength = 2.5f;
 	g_hbao_params.power_exponent = 1.0f;
 	g_hbao_params.blur_radius = 4; 
 	g_hbao_params.blur_sharpness = 8.0f; 
@@ -147,6 +150,8 @@ static HRESULT CALLBACK on_device_create( ID3D11Device* pd3dDevice, const DXGI_S
 	
 	// Initialize the ao parameters 
 	g_hbao_renderer->set_ao_parameters(g_hbao_params);
+
+	g_gui->on_create_resource(g_render_context);
 	
 	return S_OK; 
 }
@@ -155,6 +160,7 @@ static void CALLBACK on_device_destroy( void* pUserContext )
 {
 	g_scene->on_release_resource(); 
 	g_bilateral_blur->on_release_resource(); 
+	g_gui->on_release_resource();
 
 	g_gbuf_color_rtt.reset(); 
 	g_gbuf_normal_rtt.reset();
@@ -163,6 +169,7 @@ static void CALLBACK on_device_destroy( void* pUserContext )
 	g_scene.reset();
 	g_bilateral_blur.reset(); 
 	g_hbao_renderer.reset();
+	g_gui.reset();
 	
 	g_render_context.reset();
 }
@@ -183,16 +190,20 @@ static HRESULT CALLBACK on_swap_chain_resize( ID3D11Device* pd3dDevice, IDXGISwa
 	
 	g_bilateral_blur->create_sr_textures();
 
+	g_gui->on_swap_chain_resized(swap_chain_resize_event(pBackBufferSurfaceDesc->Width, pBackBufferSurfaceDesc->Height));
+	
 	return S_OK;
 }
 
 static void CALLBACK on_swap_chain_release( void* pUserContext )
 {
+	g_gui->on_swap_chain_released();
 }
 
 static void CALLBACK on_frame_move( double fTime, float fElapsedTime, void* pUserContext )
 {
 	g_scene->on_frame_update(fTime, fElapsedTime); 
+	g_gui->on_frame_update(fTime, fElapsedTime);
 }
 
 static void CALLBACK on_frame_render( ID3D11Device* pd3dDevice, ID3D11DeviceContext* pd3dImmediateContext,
@@ -204,7 +215,7 @@ static void CALLBACK on_frame_render( ID3D11Device* pd3dDevice, ID3D11DeviceCont
 	// Render the scene to gbuffer (color, normal and depth)
 	//////////////////////////////////////////////////////////////////////////
 
-	float clear_color[] = {0.0f, 0.0f, 0.0f, 1.0f};
+	float clear_color[] = {1.0f, 1.0f, 1.0f, 1.0f};
 	pd3dImmediateContext->ClearRenderTargetView(g_gbuf_color_rtt->get_rtv(), clear_color); 
 	pd3dImmediateContext->ClearDepthStencilView(g_gbuf_depth_rtt->get_dsv(), D3D11_CLEAR_DEPTH, 1.0f, 0);
 
@@ -255,6 +266,8 @@ static void CALLBACK on_frame_render( ID3D11Device* pd3dDevice, ID3D11DeviceCont
 	
 	PIX_EVENT_END();
 
+	g_gui->on_frame_render(fTime,fElapsedTime); 
+
 	PIX_EVENT_END_FRAME(); 
 
 }
@@ -262,6 +275,7 @@ static void CALLBACK on_frame_render( ID3D11Device* pd3dDevice, ID3D11DeviceCont
 static LRESULT CALLBACK msg_proc( HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, bool* pbNoFurtherProcessing, void* pUserContext )
 { 
 	g_scene->msg_proc(hWnd, uMsg, wParam, lParam, pbNoFurtherProcessing, pUserContext);
+	g_gui->msg_proc(hWnd, uMsg, wParam, lParam, pbNoFurtherProcessing, pUserContext);
 	return 0;
 }
 
@@ -270,6 +284,7 @@ void c_bilateral_blur_test_fixture::setup()
 	g_scene.reset(new c_hbao_scene_component());
 	g_hbao_renderer.reset(new c_hbao_renderer_component(FOVY));
 	g_bilateral_blur.reset(new c_bilateral_blur());
+	g_gui.reset(new c_hbao_gui_component("hbao_demo.layout"));
 
 	setup_dxut_callbacks(on_device_create, 
 		on_device_destroy,

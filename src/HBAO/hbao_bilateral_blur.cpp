@@ -230,6 +230,7 @@ void c_bilateral_blur::on_frame_render(double time, float elapsed_time)
 	ID3DX11EffectTechnique *current_tech = NULL;
 	ID3DX11EffectTechnique *current_tech_ss = NULL;
 
+	
 	if (m_input_diffuse_tex)
 	{
 		current_tech = m_blur_with_diffuse_tech; 

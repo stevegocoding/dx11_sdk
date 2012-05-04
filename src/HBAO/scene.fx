@@ -162,12 +162,13 @@ float3 brighten(float3 color)
 	return pow(saturate(color), 0.8);
 }
 
-float4 copy_color_ps(post_proc_vs_out input) : SV_TARGET
+float4 copy_diffuse_ps_main(post_proc_vs_out input) : SV_TARGET
 {
 	float color = tex_color.Sample(point_clamp_sampler, input.texcoord); 
 	return float4(brighten(color), 1); 
 }
 */
+
 
 technique11 render_scene_diffuse
 {
@@ -184,13 +185,13 @@ technique11 render_scene_diffuse
 }
 
 /*
-technique11 copy_color
+technique11 copy_diffuse
 {
 	pass p0
 	{        
 		SetVertexShader(CompileShader(vs_5_0, fullscreen_triangle_vs_main()));
         SetGeometryShader(NULL);
-        SetPixelShader(CompileShader(ps_5_0, copy_color_ps_main()));
+        SetPixelShader(CompileShader(ps_5_0, copy_diffuse_ps_main()));
         
         SetBlendState(bs_noblending, float4(0.0f, 0.0f, 0.0f, 0.0f), 0xffffffff); 
 	}

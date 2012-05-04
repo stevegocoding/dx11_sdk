@@ -52,9 +52,9 @@ static void CALLBACK on_frame_render( ID3D11Device* pd3dDevice, ID3D11DeviceCont
     PIX_EVENT_BEGIN_FRAME();
 
 	ID3D11RenderTargetView *backbuf_rtv = DXUTGetD3D11RenderTargetView();
-	float clear_color[] = {0.0f, 0.0f, 0.0f, 1.0f}; 
+	float clear_color[] = {0.0f, 0.0f, 0.0f, 0.0f}; 
 
-	pd3dImmediateContext->ClearRenderTargetView(backbuf_rtv, clear_color);
+	//pd3dImmediateContext->ClearRenderTargetView(backbuf_rtv, clear_color);
 
 	g_gui->on_frame_render(fTime, fElapsedTime); 
 

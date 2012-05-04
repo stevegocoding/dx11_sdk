@@ -16,7 +16,9 @@ c_hbao_gui_component::c_hbao_gui_component(const std::string& layout_name)
     : m_d3d11_renderer(NULL)
     , m_mouse_in_wnd(false)
 	, m_layout_file_name(layout_name)
+	, m_manual_setup_ui(layout_name.empty())
 {
+	
 }
 
 HRESULT c_hbao_gui_component::on_create_resource(const render_sys_context_ptr& render_sys_context)
@@ -36,9 +38,18 @@ HRESULT c_hbao_gui_component::on_create_resource(const render_sys_context_ptr& r
     init_cegui_renderer(m_render_sys_context); 
     init_cegui_resouce();
     
-    m_default_wnd.reset(new c_gui_main_window(m_layout_file_name));
+    m_default_wnd.reset(new c_gui_main_window(m_layout_file_name, true));
     
     return hr; 
+}
+
+void c_hbao_gui_component::setup_ui()
+{
+	using namespace CEGUI;
+	
+	WindowManager& win_mgr = WindowManager::getSingleton(); 
+ 
+	
 }
 
 void c_hbao_gui_component::on_release_resource()
