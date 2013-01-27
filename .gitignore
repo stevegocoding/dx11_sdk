@@ -2,9 +2,20 @@
 ###########################
 media/
 deps/
-build/
 
-# LaTeX temp files 
+build/
 *.aux
 *.log
 *.synctex
+*.synctex.gz
+*.toc
+*.lof
+*.lot
+*.jpg
+*.png
+*.svg
+*.bbl
+*.blg
+*.doc
+*.asv
+*.bak
